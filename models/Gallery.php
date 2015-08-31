@@ -71,7 +71,7 @@ class Gallery extends \yii\mongodb\ActiveRecord
         
         $template = null;
         switch ($type) {
-            case 'url':
+            case \sya\gallery\Gallery::TYPE_URL:
                 $template = Html::img($urlImg, $options);
                 break;
             default:
@@ -115,12 +115,12 @@ class Gallery extends \yii\mongodb\ActiveRecord
      */
     public static function getInputImageByType($type){
         switch ($type) {
-            case 'path':
+            case \sya\gallery\Gallery::TYPE_PATH:
                 $template = Html::beginTag('div', ['id' => 'input_image_' . $type,'class' => 'input_image_display', 'style' => 'height: 350px; overflow-y: scroll;']);
                     $template .= self::getGalleryByPath(Yii::getAlias(Yii::$app->getModule('gallery')->syaDirPath) . Yii::$app->getModule('gallery')->syaDirUpload);
                 $template .= Html::endTag('div');
                 break;
-            case 'upload':
+            case \sya\gallery\Gallery::TYPE_UPLOAD:
                 $template = Html::fileInput('input_image', '', ['class' => 'form-control input_image input_image_display', 'data-type' => $type]);
                 break;
             default:

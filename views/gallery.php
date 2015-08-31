@@ -18,7 +18,7 @@ Modal::begin([
         <div id="field-type-image" class="field-type-image form-group" style="margin-top: 20px;">
             <?= sya\gallery\models\Gallery::getInputImageByType('upload'); ?>
         </div>
-        <?= Html::button('Upload', ['class' => 'btn btn-success pull-right', 'onclick' => 'letUploadImage();']); ?>
+        <?= Html::button('Upload', ['class' => 'btn btn-success pull-right', 'onclick' => 'syaUploadImage();']); ?>
     </div>
 <?php Modal::end(); // End Display button add image and modal add image ?>
 <!-- Begin Display image gallery -->

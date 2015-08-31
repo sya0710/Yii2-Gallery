@@ -2,8 +2,8 @@
 
 namespace sya\gallery\controllers;
 
+use sya\gallery\Gallery;
 use Yii;
-use yii\web\NotFoundHttpException;
 use sya\gallery\helpers\FileHelper;
 
 class AjaxController extends \yii\web\Controller{
@@ -29,7 +29,7 @@ class AjaxController extends \yii\web\Controller{
         $id = uniqid('g_');
         
         // Begin upload image
-        if ($type == 'upload'){// Upload anh khi chon type la upload
+        if ($type == Gallery::TYPE_UPLOAD){// Upload anh khi chon type la upload
             $image = \yii\web\UploadedFile::getInstanceByName('image');
             if (!empty($image)) {
                 $ext = FileHelper::getExtention($image);
@@ -47,14 +47,14 @@ class AjaxController extends \yii\web\Controller{
                 'url' => $image, 
                 'type' => $type
             ];
-        } elseif ($type == 'url') {// Lay ra duong dan anh khi type la url
+        } elseif ($type == Gallery::TYPE_URL) {// Lay ra duong dan anh khi type la url
             $image = Yii::$app->request->post('image');
             
             $gallery[$id] = [
                 'url' => $image, 
                 'type' => $type
             ];
-        } elseif ($type == 'path') {
+        } elseif ($type == Gallery::TYPE_PATH) {
             $image = Yii::$app->request->post('image');
             $images = explode(',', $image);
             

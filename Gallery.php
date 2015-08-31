@@ -9,12 +9,14 @@ use yii\bootstrap\Modal;
 use yii\bootstrap\ActiveForm;
 
 class Gallery extends \yii\widgets\InputWidget {
+
+    // Type upload
+    CONST TYPE_UPLOAD = 'upload';
+    CONST TYPE_URL = 'url';
+    CONST TYPE_PATH = 'path';
+
     // Kieu upload anh
-    private $typeImage = [
-        'upload' => 'Upload ảnh mới',
-        'url' => 'Link trực tiếp',
-        'path' => 'Chọn từ gallery',
-    ];
+    private $typeImage = [];
     
     /**
      * Thong tin cua image
@@ -42,6 +44,11 @@ class Gallery extends \yii\widgets\InputWidget {
     
     public function init() {
         $this->moduleName = \yii\helpers\StringHelper::basename(get_class($this->model));
+        $this->typeImage = [
+            self::TYPE_UPLOAD => 'Upload ảnh mới',
+            self::TYPE_URL => 'Link trực tiếp',
+            self::TYPE_PATH => 'Chọn từ gallery',
+        ];
         $this->registerAssets();
     }
 
@@ -65,7 +72,7 @@ class Gallery extends \yii\widgets\InputWidget {
         ');
         
         $this->getView()->registerJs('
-            function letUploadImage(){
+            function syaUploadImage(){
                 //kiem tra trinh duyet co ho tro File API
                 if (window.File && window.FileReader && window.FileList && window.Blob)
                 {
