@@ -4,9 +4,6 @@ namespace sya\gallery;
 
 use Yii;
 use yii\bootstrap\Html;
-use yii\helpers\ArrayHelper;
-use yii\bootstrap\Modal;
-use yii\bootstrap\ActiveForm;
 
 class Gallery extends \yii\widgets\InputWidget {
 
@@ -14,9 +11,6 @@ class Gallery extends \yii\widgets\InputWidget {
     CONST TYPE_UPLOAD = 'upload';
     CONST TYPE_URL = 'url';
     CONST TYPE_PATH = 'path';
-
-    // Kieu upload anh
-    private $typeImage = [];
     
     /**
      * Thong tin cua image
@@ -44,11 +38,6 @@ class Gallery extends \yii\widgets\InputWidget {
     
     public function init() {
         $this->moduleName = \yii\helpers\StringHelper::basename(get_class($this->model));
-        $this->typeImage = [
-            self::TYPE_UPLOAD => 'Upload ảnh mới',
-            self::TYPE_URL => 'Link trực tiếp',
-            self::TYPE_PATH => 'Chọn từ gallery',
-        ];
         $this->registerAssets();
     }
 
@@ -56,7 +45,6 @@ class Gallery extends \yii\widgets\InputWidget {
         $galleries = Html::getAttributeValue($this->model, $this->attribute);
         
         return $this->render('gallery', [
-            'typeImage' => $this->typeImage,
             'moduleName' => $this->moduleName,
             'columns' => $this->columns,
             'galleries' => $galleries,
@@ -65,27 +53,12 @@ class Gallery extends \yii\widgets\InputWidget {
     
     private function registerAssets(){
         GalleryAssets::register($this->getView());
-        
-        $this->getView()->registerCss('
-            .letImgPreview {border: 1px solid #B5B5B5; padding: 4px; margin-bottom: 20px; cursor: pointer;}
-            .letImgPreview img {max-width: 100%; height: 200px;}
-        ');
-        
+
         $this->getView()->registerJs('
-            function syaUploadImage(){
+            function syaUploadImage(type, image){
                 //kiem tra trinh duyet co ho tro File API
                 if (window.File && window.FileReader && window.FileList && window.Blob)
                 {
-                    var type = $(".input_image").attr("data-type");
-                    // Kiem tra kieu upload anh
-                    if (type == "upload"){
-                        var image = $(".input_image")[0].files[0];
-                        // Neu khong upload anh
-                        if (image == "undefined")
-                            image = null;
-                    } else {
-                        var image = $(".input_image").val();
-                    }
                         
                     var module = "' . $this->moduleName . '";
                     var columns = \'' . \yii\helpers\Json::encode($this->columns) . '\';
@@ -137,17 +110,43 @@ class Gallery extends \yii\widgets\InputWidget {
             // Sap xep anh
             $("#tableImage").sortable({});
 
-            // Change type upload anh
-            $("#changeTypeImage").change(function () {
-                var type = $(this).val();
-                $.ajax({
-                    url: "' . \yii\helpers\Url::to(['/gallery/ajax/getinputupload']) . '",
-                    type: "post",
-                    data: {type: type},
-                }).done(function (data) {
-                    $("#field-type-image").html(data);
-                });
-            }).change();
+            Dropzone.options.myAwesomeDropzone = {
+
+                autoProcessQueue: false,
+                uploadMultiple: true,
+                parallelUploads: 100,
+                maxFiles: 100,
+                paramName: "image",
+                url: "' . \yii\helpers\Url::to(['/gallery/ajax/additemimage']) . '",
+                headers: {
+                    "Accept": "*/*"
+                },
+
+                // Dropzone settings
+                init: function() {
+                    var myDropzone = this;
+
+                    this.element.querySelector("#uploadFile").addEventListener("click", function(e) {
+                        myDropzone.options.autoProcessQueue = true;
+                        myDropzone.processQueue();
+                    });
+
+                    this.on("sending", function(file, xhr, formData) {
+                        var module = "' . $this->moduleName . '";
+                        var columns = \'' . \yii\helpers\Json::encode($this->columns) . '\';
+
+                        formData.append("type", "upload");
+                        formData.append("module", module);
+                        formData.append("columns", columns);
+                    });
+                }
+
+//                accept: function(file, done) {
+//                    var myDropzone = this;
+//                    syaUploadImage("upload", file);
+//                    myDropzone.processQueue();
+//                },
+            }
         ', yii\web\View::POS_READY);
     }
 }

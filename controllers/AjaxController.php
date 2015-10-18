@@ -42,22 +42,22 @@ class AjaxController extends \yii\web\Controller{
                     $image = $fileDir . $fileName;
                 }
             }
-            
+
             $gallery[$id] = [
-                'url' => $image, 
+                'url' => $image,
                 'type' => $type
             ];
         } elseif ($type == Gallery::TYPE_URL) {// Lay ra duong dan anh khi type la url
             $image = Yii::$app->request->post('image');
-            
+
             $gallery[$id] = [
-                'url' => $image, 
+                'url' => $image,
                 'type' => $type
             ];
         } elseif ($type == Gallery::TYPE_PATH) {
             $image = Yii::$app->request->post('image');
             $images = explode(',', $image);
-            
+
             if (!empty($image) && is_array($images)) {
                 foreach ($images as $img){
                     $id = uniqid('g_');

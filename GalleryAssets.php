@@ -4,12 +4,11 @@ namespace sya\gallery;
 
 class GalleryAssets extends \yii\web\AssetBundle
 {
-	public $sourcePath = '@vendor/bower/jquery-ui';
-	public $js = [
-        'jquery-ui.min.js',
+	public $sourcePath = '@vendor/sya/yii2-gallery/assets';
+	public $css = [
+        'css/syagallery.css',
 	];
 	public $depends = [
-        'yii\web\JqueryAsset',
-        'yii\bootstrap\BootstrapAsset',
+        'sya\gallery\JqueryUIAssets',
 	];
 }

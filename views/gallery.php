@@ -1,6 +1,5 @@
 <?php
 use yii\bootstrap\Modal;
-use yii\bootstrap\Html;
 use yii\helpers\ArrayHelper;
 
 // Display button add image and modal add image
@@ -12,15 +11,28 @@ Modal::begin([
     ],
     'size' => 'modal-lg'
 ]);
-?>
-    <div class="row">
-        <?= Html::dropDownList('typeImage', 'upload', $typeImage, ['class' => 'form-control', 'id' => 'changeTypeImage']); ?>
-        <div id="field-type-image" class="field-type-image form-group" style="margin-top: 20px;">
-            <?= sya\gallery\models\Gallery::getInputImageByType('upload'); ?>
-        </div>
-        <?= Html::button('Upload', ['class' => 'btn btn-success pull-right', 'onclick' => 'syaUploadImage();']); ?>
-    </div>
-<?php Modal::end(); // End Display button add image and modal add image ?>
+
+echo yii\bootstrap\Tabs::widget([
+    'itemOptions' => [
+        'style' => 'margin-top: 30px;'
+    ],
+    'navType' => 'menuManager nav-tabs',
+    'encodeLabels' => false,
+    'items' => [
+        [
+            'label' => Yii::t('yii', 'Please upload a file.'),
+            'content' => '<div id="my-awesome-dropzone" class="dropzone sya_custom_dropzone">
+                            <div class="dropzone-previews"></div>
+                            <button type="button" id="uploadFile" class="btn btn-primary pull-right">Submit this form!</button>
+                        </div>'
+        ],
+        [
+            'label' => Yii::t('gallery', 'Media library')
+        ],
+    ]
+]);
+
+Modal::end(); // End Display button add image and modal add image ?>
 <!-- Begin Display image gallery -->
 <table class="table table-bordered table-stripped" style="margin-top: 30px;">
     <!-- Begin header table -->
