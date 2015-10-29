@@ -12,8 +12,9 @@ class DropzoneAssets extends \yii\web\AssetBundle
 		'basic.min.css',
 		'dropzone.min.css'
 	];
+
 	public $depends = [
-        'yii\web\JqueryAsset',
-        'yii\bootstrap\BootstrapAsset',
+		'yii\jui\JuiAsset',
+		'yii\bootstrap\BootstrapPluginAsset',
 	];
 }

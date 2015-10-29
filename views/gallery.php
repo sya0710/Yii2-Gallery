@@ -13,9 +13,6 @@ Modal::begin([
 ]);
 
 echo yii\bootstrap\Tabs::widget([
-    'itemOptions' => [
-        'style' => 'margin-top: 30px;'
-    ],
     'navType' => 'menuManager nav-tabs',
     'encodeLabels' => false,
     'items' => [
@@ -23,7 +20,6 @@ echo yii\bootstrap\Tabs::widget([
             'label' => Yii::t('yii', 'Please upload a file.'),
             'content' => '<div id="my-awesome-dropzone" class="dropzone sya_custom_dropzone">
                             <div class="dropzone-previews"></div>
-                            <button type="button" id="uploadFile" class="btn btn-primary pull-right">Submit this form!</button>
                         </div>'
         ],
         [

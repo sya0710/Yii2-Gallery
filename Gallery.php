@@ -55,35 +55,6 @@ class Gallery extends \yii\widgets\InputWidget {
         GalleryAssets::register($this->getView());
 
         $this->getView()->registerJs('
-            function syaUploadImage(type, image){
-                //kiem tra trinh duyet co ho tro File API
-                if (window.File && window.FileReader && window.FileList && window.Blob)
-                {
-                        
-                    var module = "' . $this->moduleName . '";
-                    var columns = \'' . \yii\helpers\Json::encode($this->columns) . '\';
-
-                    var data = new FormData();
-                    data.append("type", type);
-                    data.append("module", module);
-                    data.append("columns", columns);
-                    data.append("image", image);
-
-                    $.ajax({
-                        url: "' . \yii\helpers\Url::to(['/gallery/ajax/additemimage']) . '",
-                        type: "post",
-                        data: data,
-                        processData: false,
-                        contentType: false,
-                        enctype: "multipart/form-data",
-                    }).done(function (data) {
-                        $("#tableImage").append(data);
-                    });
-                } else {
-                    alert("Please upgrade your browser, because your current browser lacks some new features we need!");
-                }
-            }
-            
             function insertImagePath(element){
                 var data = $("#let_galleries").val();
                 if (data == ""){
@@ -111,41 +82,33 @@ class Gallery extends \yii\widgets\InputWidget {
             $("#tableImage").sortable({});
 
             Dropzone.options.myAwesomeDropzone = {
-
-                autoProcessQueue: false,
                 uploadMultiple: true,
                 parallelUploads: 100,
                 maxFiles: 100,
                 paramName: "image",
-                url: "' . \yii\helpers\Url::to(['/gallery/ajax/additemimage']) . '",
+                params: {
+                    type: "' . Gallery::TYPE_UPLOAD . '",
+                    module: "' . $this->moduleName . '",
+                    columns: \'' . \yii\helpers\Json::encode($this->columns) . '\'
+                },
+                autoDiscover: false,
+                url: "http://sya' . \yii\helpers\Url::to(['/gallery/ajax/additemimage']) . '",
                 headers: {
-                    "Accept": "*/*"
+                    "Accept": "*/*",
+                    "' . \yii\web\Request::CSRF_HEADER . '": "' . Yii::$app->getRequest()->csrfToken . '"
                 },
 
                 // Dropzone settings
                 init: function() {
-                    var myDropzone = this;
-
-                    this.element.querySelector("#uploadFile").addEventListener("click", function(e) {
-                        myDropzone.options.autoProcessQueue = true;
-                        myDropzone.processQueue();
+                    this.on("sendingmultiple", function(image, xhr, formData) {
+                        formData.processData = false;
+                        formData.contentType = false;
                     });
 
-                    this.on("sending", function(file, xhr, formData) {
-                        var module = "' . $this->moduleName . '";
-                        var columns = \'' . \yii\helpers\Json::encode($this->columns) . '\';
-
-                        formData.append("type", "upload");
-                        formData.append("module", module);
-                        formData.append("columns", columns);
+                    this.on("successmultiple", function(files, responseText, e) {
+                        $("#tableImage").append(responseText);
                     });
                 }
-
-//                accept: function(file, done) {
-//                    var myDropzone = this;
-//                    syaUploadImage("upload", file);
-//                    myDropzone.processQueue();
-//                },
             }
         ', yii\web\View::POS_READY);
     }

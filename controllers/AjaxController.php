@@ -24,14 +24,20 @@ class AjaxController extends \yii\web\Controller{
         
         // danh sach cac anh duoc upload
         $gallery = [];
-        
+
         // Id cua gallery
         $id = uniqid('g_');
         
         // Begin upload image
         if ($type == Gallery::TYPE_UPLOAD){// Upload anh khi chon type la upload
-            $image = \yii\web\UploadedFile::getInstanceByName('image');
-            if (!empty($image)) {
+            $images = \yii\web\UploadedFile::getInstancesByName('image');
+            if (empty($images))
+                return;
+
+            foreach ($images as $image) {
+                // Tao lai id khi upload nhieu anh
+                $id = uniqid('g_');
+
                 $ext = FileHelper::getExtention($image);
                 if (!empty($ext)) {
                     $fileDir = strtolower($module) . '/' . date('Y/m/d/');
@@ -39,14 +45,13 @@ class AjaxController extends \yii\web\Controller{
                     $folder = Yii::getAlias(Yii::$app->getModule('gallery')->syaDirPath) . Yii::$app->getModule('gallery')->syaDirUpload . '/' . $fileDir;
                     FileHelper::createDirectory($folder);
                     $image->saveAs($folder . $fileName);
-                    $image = $fileDir . $fileName;
+
+                    $gallery[$id] = [
+                        'url' => $fileDir . $fileName,
+                        'type' => $type
+                    ];
                 }
             }
-
-            $gallery[$id] = [
-                'url' => $image,
-                'type' => $type
-            ];
         } elseif ($type == Gallery::TYPE_URL) {// Lay ra duong dan anh khi type la url
             $image = Yii::$app->request->post('image');
 
