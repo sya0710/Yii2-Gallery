@@ -92,10 +92,11 @@ class Gallery extends \yii\widgets\InputWidget {
                     columns: \'' . \yii\helpers\Json::encode($this->columns) . '\'
                 },
                 autoDiscover: false,
-                url: "http://sya' . \yii\helpers\Url::to(['/gallery/ajax/additemimage']) . '",
+                url: "' . \yii\helpers\Url::to(['/gallery/ajax/additemimage']) . '",
                 headers: {
                     "Accept": "*/*",
-                    "' . \yii\web\Request::CSRF_HEADER . '": "' . Yii::$app->getRequest()->csrfToken . '"
+                    "' . \yii\web\Request::CSRF_HEADER . '": "' . Yii::$app->getRequest()->csrfToken . '",
+                    "Access-Control-Allow-Origin": "*"
                 },
 
                 // Dropzone settings
@@ -103,6 +104,7 @@ class Gallery extends \yii\widgets\InputWidget {
                     this.on("sendingmultiple", function(image, xhr, formData) {
                         formData.processData = false;
                         formData.contentType = false;
+                        formData.enctype = "multipart/form-data";
                     });
 
                     this.on("successmultiple", function(files, responseText, e) {
