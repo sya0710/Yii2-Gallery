@@ -113,20 +113,27 @@ class Gallery extends \yii\mongodb\ActiveRecord
      * Ham tao giao dien upload anh
      * @return string
      */
-    public static function getInputImageByType($type){
-        switch ($type) {
-            case \sya\gallery\Gallery::TYPE_PATH:
-                $template = Html::beginTag('div', ['id' => 'input_image_' . $type,'class' => 'input_image_display', 'style' => 'height: 350px; overflow-y: scroll;']);
-                    $template .= self::getGalleryByPath(Yii::getAlias(Yii::$app->getModule('gallery')->syaDirPath) . Yii::$app->getModule('gallery')->syaDirUpload);
-                $template .= Html::endTag('div');
-                break;
-            case \sya\gallery\Gallery::TYPE_UPLOAD:
-                $template = Html::fileInput('input_image', '', ['class' => 'form-control input_image input_image_display', 'data-type' => $type]);
-                break;
-            default:
-                $template = Html::input('text', 'input_image', '', ['class' => 'form-control input_image input_image_display', 'data-type' => $type]);
-                break;
-        }
+    public static function generateInsertFromUrl($image){
+        // Image preview
+        $template = Html::beginTag('div', ['class' => 'col-sm-12']);
+            $template .= Html::img($image, ['id' => 'embed_image_url']);
+        $template .= Html::endTag('div');
+
+        // Caption image
+        $template .= Html::beginTag('div', ['class' => 'col-sm-12 embed_field']);
+            $template .= Html::beginTag('label', ['class' => 'row']);
+                $template .= Html::tag('span', 'Caption', ['class' => 'col-sm-12']);
+                $template .= Html::textarea('', '', ['class' => 'form-control col-sm-12']);
+            $template .= Html::endTag('label');
+        $template .= Html::endTag('div');
+
+        // Alt text image
+        $template .= Html::beginTag('div', ['class' => 'col-sm-12 embed_field']);
+            $template .= Html::beginTag('label', ['class' => 'row']);
+                $template .= Html::tag('span', 'Alt text', ['class' => 'col-sm-12']);
+                $template .= Html::input('text', '', '', ['class' => 'form-control col-sm-12']);
+            $template .= Html::endTag('label');
+        $template .= Html::endTag('div');
             
         return $template;
     }

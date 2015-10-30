@@ -55,12 +55,19 @@ class AjaxController extends \yii\web\Controller{
         } elseif ($type == Gallery::TYPE_URL) {// Lay ra duong dan anh khi type la url
             $image = Yii::$app->request->post('image');
 
+            if (empty($image))
+                return;
+
             $gallery[$id] = [
                 'url' => $image,
                 'type' => $type
             ];
         } elseif ($type == Gallery::TYPE_PATH) {
             $image = Yii::$app->request->post('image');
+
+            if (empty($image))
+                return;
+
             $images = explode(',', $image);
 
             if (!empty($image) && is_array($images)) {
@@ -76,6 +83,15 @@ class AjaxController extends \yii\web\Controller{
         // End upload image
         
         echo \sya\gallery\models\Gallery::generateGalleryTemplate($gallery, $module, $columns);
+    }
+
+    public function actionGetimagepreview() {
+        $image = Yii::$app->request->post('image');
+
+        if (empty($image))
+            return;
+
+        echo \sya\gallery\models\Gallery::generateInsertFromUrl($image);
     }
     
     /**

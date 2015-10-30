@@ -63,6 +63,23 @@ class Gallery extends \yii\widgets\InputWidget {
                     $("#let_galleries").val(data.concat("," + $(element).attr("id")));
                 }
             }
+
+            function addImageByGallery(type){
+                var module = "' . $this->moduleName . '",
+                    columns = \'' . \yii\helpers\Json::encode($this->columns) . '\',
+                    image = $("#image").val();
+
+                $.ajax({
+                    url: "' . \yii\helpers\Url::to(['/gallery/ajax/additemimage']) . '",
+                    type: "post",
+                    data: {type: type, module: module, columns: columns, image: image},
+                }).done(function (data) {
+                    if (data.length > 0) {
+                        $("#tableImage").append(data);
+                        $("#sya_gallery").modal("hide");
+                    }
+                });
+            }
             
             // Ham xoa anh
             function removeImage(element){
@@ -81,13 +98,14 @@ class Gallery extends \yii\widgets\InputWidget {
             // Sap xep anh
             $("#tableImage").sortable({});
 
+            // Dropzone drop and drag file
             Dropzone.options.myAwesomeDropzone = {
                 uploadMultiple: true,
                 parallelUploads: 100,
                 maxFiles: 100,
                 paramName: "image",
                 params: {
-                    type: "' . Gallery::TYPE_UPLOAD . '",
+                    type: "' . self::TYPE_UPLOAD . '",
                     module: "' . $this->moduleName . '",
                     columns: \'' . \yii\helpers\Json::encode($this->columns) . '\'
                 },
@@ -112,6 +130,26 @@ class Gallery extends \yii\widgets\InputWidget {
                     });
                 }
             }
+
+            // Forcus input
+            $(".custom_modal_gallery a[data-toggle=\'tab\']").on("shown.bs.tab", function (e) {
+                $("#insert_image").attr("data-type", $(e.target).attr("data-type"));
+                $(e.target).parents(".tabs-container").find("#image").focus();
+            })
+
+            $("#image").on("input",function(e){
+                $.ajax({
+                    url: "' . \yii\helpers\Url::to(['/gallery/ajax/getimagepreview']) . '",
+                    type: "post",
+                    data: {image: $(this).val()},
+                }).done(function (data) {
+                    $("#embed_url_settings").html(data);
+                });
+            });
+
+            $("#insert_image").click(function() {
+                addImageByGallery($(this).attr("data-type"));
+            });
         ', yii\web\View::POS_READY);
     }
 }
