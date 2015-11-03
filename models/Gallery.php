@@ -16,7 +16,11 @@ class Gallery extends \yii\mongodb\ActiveRecord
         'gif',
         'png'
     ];
-    
+
+    private static $countFileItem = 0;
+
+    private static $countFileItemLimit = 0;
+
     /**
      * Ham tao giao dien cho image
      * @param array $galleries mang cac gia tri cua image
@@ -52,12 +56,47 @@ class Gallery extends \yii\mongodb\ActiveRecord
 
                 // Cac action xu ly cua image
                 $templateGallery .= Html::beginTag('td', ['style' => 'vertical-align: middle; text-align: center;']);
-                    $templateGallery .= Html::button('<i class="fa fa-trash"></i>', ['class' => 'btn btn-white', 'onclick' => 'removeImage(this);']);
+                    $templateGallery .= Html::button('<i class="fa fa-trash"></i>', ['class' => 'btn btn-white', 'onclick' => 'syaremoveImage(this);']);
                 $templateGallery .= Html::endTag('td');
             $templateGallery .= Html::endTag('tr');
         }
         
         return $templateGallery;
+    }
+
+    /**
+     * Function Gen template gallery by path upload
+     * @param array $galleries Array item image
+     * @return string
+     */
+    public static function generateGalleryTemplateByPath($galleries){
+        $templateGallery = '';
+        foreach ($galleries as $galleryId => $gallery) {
+            // Gia tri mac dinh cua image
+            $urlImg = ArrayHelper::getValue($gallery, 'url');
+
+            $templateGallery .= self::_generateGalleryTemplateByPath($urlImg, Yii::$app->getModule('gallery')->syaDirUpload . DIRECTORY_SEPARATOR . $urlImg);
+        }
+
+        return $templateGallery;
+    }
+
+    /**
+     * Function gen template one image by path
+     * @param $imgPath Path of image
+     * @param $imgPathFull Path full of image
+     * @return string
+     */
+    private static function _generateGalleryTemplateByPath($imgPath, $imgPathFull){
+        $template = Html::beginTag('div', ['class' => 'col-md-3 col-lg-3 text-center']);
+
+            // View image
+            $template .= Html::beginTag('div', ['class' => 'letImgPreview', 'id' => $imgPath, 'onclick' => 'syainsertImagePath(this);']);
+            $template .= Html::img('@web/' . $imgPathFull, ['style' => 'max-width: 100%;']);
+            $template .= Html::endTag('div');
+        $template .= Html::endTag('div');
+
+        return $template;
     }
     
     /**
@@ -110,12 +149,12 @@ class Gallery extends \yii\mongodb\ActiveRecord
     }
     
     /**
-     * Ham tao giao dien upload anh
+     * Ham tao giao dien upload anh truc tiep = url
      * @return string
      */
     public static function generateInsertFromUrl($image){
         // Image preview
-        $template = Html::beginTag('div', ['class' => 'col-sm-12']);
+        $template = Html::beginTag('div', ['class' => 'col-sm-12', 'style' => 'margin-top: -55px;']);
             $template .= Html::img($image, ['id' => 'embed_image_url']);
         $template .= Html::endTag('div');
 
@@ -137,43 +176,56 @@ class Gallery extends \yii\mongodb\ActiveRecord
             
         return $template;
     }
-    
+
     /**
      * Ham lay ra hinh anh trong website theo duong dan
      * @param string $path duong dan chua anh
+     * @param int $page so trang
+     * @param int $limit gioi han lay bao nhieu anh 1 lan
      * @param string $template hinh anh duoc lay ra tu thu muc upload
-     * @return string
+     * @return null|string
      */
-    private function getGalleryByPath($path, $template = ''){
+    public static function getGalleryByPath($path = '', $page = 1, $limit = 12, $template = ''){
+        // So file can lay
+        $offset = $page * $limit;
+
         // Duong dan chua anh
         $rootPath = Yii::getAlias(Yii::$app->getModule('gallery')->syaDirPath);
         
         // Thu muc upload
         $dirPath = Yii::$app->getModule('gallery')->syaDirUpload;
-        
+
         if (!file_exists($path))
             return null;
-        
-        $entrys = scandir($path);
-        foreach ($entrys as $entry) {
+
+        // Get all file and Sort file DESC time
+        $entrys = scandir($path, 1);
+
+        foreach ($entrys as $k => $entry) {
+            if (self::$countFileItem == $offset) {
+                self::$countFileItemLimit = 0;
+                break;
+            }
+
             if (in_array($entry, ['.', '..', 'cache']))
                 continue;
-            
+
             $entryPath = $path . DIRECTORY_SEPARATOR . $entry;
             if (is_dir($entryPath)) {
-                $template .= self::getGalleryByPath($entryPath, $template);
+                $template = self::getGalleryByPath($entryPath, $page, $limit, $template);
             } else {
+                self::$countFileItem++;
+                self::$countFileItemLimit++;
+
+                if ($page !== 1 AND self::$countFileItemLimit + $limit <= $offset){
+                    continue;
+                }
+
                 if (in_array(end(explode('.', $entry)), self::$fileType)) {
                     $imgPath = str_replace($rootPath . $dirPath . DIRECTORY_SEPARATOR, '', $entryPath);
-                    $template .= Html::beginTag('div', ['class' => 'col-md-3 text-center']);
-                        // input chua cac image duoc chon
-                        $template .= Html::hiddenInput('let_galleries', '', ['id' => 'let_galleries','class' => 'col-md-3 text-center input_image', 'data-type' => 'path']);
-                        
-                        // View image
-                        $template .= Html::beginTag('div', ['class' => 'letImgPreview', 'id' => $imgPath, 'onclick' => 'insertImagePath(this);']);
-                            $template .= Html::img('@web/' . $dirPath . DIRECTORY_SEPARATOR . $imgPath, ['style' => 'max-width: 100%; height: 200px;']);
-                        $template .= Html::endTag('div');
-                    $template .= Html::endTag('div');
+
+                    // Generate img by path gallery library
+                    $template .= self::_generateGalleryTemplateByPath($imgPath, $dirPath . DIRECTORY_SEPARATOR . $imgPath);
                 }
             }
         }

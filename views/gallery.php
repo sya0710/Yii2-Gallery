@@ -6,14 +6,14 @@ use yii\bootstrap\Html;
 // Display button add image and modal add image
 Modal::begin([
     'header' => Yii::t('yii', 'Add Image'),
-    'footer' => '<button class="btn btn-success" id="insert_image" data-type="' . \sya\gallery\Gallery::TYPE_UPLOAD . '">' . Yii::t('yii', 'Insert Image') . '</button>',
+    'footer' => '<button class="btn btn-success" id="insert_image" data-type="' . \sya\gallery\Gallery::TYPE_UPLOAD . '">' . Yii::t('yii', 'Insert Image') . '</button><button onclick="syaloadMoreImage();">Load</button>',
     'toggleButton' => [
         'label' => Yii::t('yii', 'Add Image'),
         'class' => 'btn btn-success'
     ],
     'size' => 'modal-lg custom_modal_gallery',
     'options' => [
-        'id' => 'sya_gallery'
+        'id' => 'sya_gallery_modal'
     ]
 ]);
 echo Html::beginTag('div', ['class' => 'tabs-container']);
@@ -32,12 +32,22 @@ echo Html::beginTag('div', ['class' => 'tabs-container']);
                     ]
                 ],
                 [
+                    'label' => Yii::t('gallery', 'Media Library'),
+                    'content' => '<div class="panel-body" style="padding: 0;">
+                        <div class="col-md-9" id="sya_gallery_path">
+                            <div class="row sya_media_library"></div>
+                        </div>
+                        <div class="col-md-3" id="sya_gallery_viewpath"></div>
+                    </div>',
+                    'linkOptions' => [
+                        'data-type' => \sya\gallery\Gallery::TYPE_PATH
+                    ]
+                ],
+                [
                     'label' => Yii::t('gallery', 'Insert from URL'),
                     'content' => '<div class="panel-body">
                         <input type="url" id="image" class="form-control"/>
-                        <div id="embed_url_settings" class="row">
-
-                        </div>
+                        <div id="embed_url_settings" class="row"></div>
                     </div>',
                     'linkOptions' => [
                         'data-type' => \sya\gallery\Gallery::TYPE_URL

@@ -5,6 +5,7 @@ namespace sya\gallery\controllers;
 use sya\gallery\Gallery;
 use Yii;
 use sya\gallery\helpers\FileHelper;
+use yii\bootstrap\Html;
 
 class AjaxController extends \yii\web\Controller{
     
@@ -52,6 +53,8 @@ class AjaxController extends \yii\web\Controller{
                     ];
                 }
             }
+            
+            $template = \sya\gallery\models\Gallery::generateGalleryTemplateByPath($gallery);
         } elseif ($type == Gallery::TYPE_URL) {// Lay ra duong dan anh khi type la url
             $image = Yii::$app->request->post('image');
 
@@ -62,6 +65,8 @@ class AjaxController extends \yii\web\Controller{
                 'url' => $image,
                 'type' => $type
             ];
+
+            $template = \sya\gallery\models\Gallery::generateGalleryTemplate($gallery, $module, $columns);
         } elseif ($type == Gallery::TYPE_PATH) {
             $image = Yii::$app->request->post('image');
 
@@ -79,10 +84,12 @@ class AjaxController extends \yii\web\Controller{
                     ];
                 }
             }
+
+            $template = \sya\gallery\models\Gallery::generateGalleryTemplate($gallery, $module, $columns);
         }
         // End upload image
         
-        echo \sya\gallery\models\Gallery::generateGalleryTemplate($gallery, $module, $columns);
+        echo $template;
     }
 
     public function actionGetimagepreview() {
@@ -93,14 +100,15 @@ class AjaxController extends \yii\web\Controller{
 
         echo \sya\gallery\models\Gallery::generateInsertFromUrl($image);
     }
-    
+
     /**
      * Action tao giao dien upload
      */
-    public function actionGetinputupload(){
-        // Kieu upload
-        $type = Yii::$app->request->post('type');
-        
-        echo \sya\gallery\models\Gallery::getInputImageByType($type);
+    public function actionGetgallerypath(){
+        $path = Yii::getAlias(Yii::$app->getModule('gallery')->syaDirPath) . Yii::$app->getModule('gallery')->syaDirUpload;
+
+        $page = Yii::$app->request->post('page', 1);
+
+        echo \sya\gallery\models\Gallery::getGalleryByPath($path, $page);
     }
 }
