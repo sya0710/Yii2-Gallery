@@ -2,6 +2,7 @@
 namespace sya\gallery\helpers;
 
 use Yii;
+use yii\helpers\ArrayHelper;
 
 class FileHelper extends \yii\helpers\FileHelper {
     
@@ -15,6 +16,22 @@ class FileHelper extends \yii\helpers\FileHelper {
         if (($ext = pathinfo($file, PATHINFO_EXTENSION)) !== '')
             return strtolower($ext);
         return FALSE;
+    }
+
+    public static function getInfomation($file){
+        $info = pathinfo($file);
+        $info['filesize'] = self::customFileSize(filesize($file));
+        $info['fileatime'] = filemtime($file);
+        $info['width'] = ArrayHelper::getValue(getimagesize($file), 0);
+        $info['height'] = ArrayHelper::getValue(getimagesize($file), 1);
+
+        return $info;
+    }
+
+    public static function customFileSize($bytes, $decimals = 2) {
+        $size = ['B','KB','MB','GB','TB','PB','EB','ZB','YB'];
+        $factor = floor((strlen($bytes) - 1) / 3);
+        return sprintf("%.{$decimals}f", $bytes / pow(1024, $factor)) . ' ' . @$size[$factor];
     }
     
     /**

@@ -26,12 +26,12 @@ use sya\gallery\Module;
 ## Demo
 
 ```php
-use sya\gallery\Gallery;
+use sya\gallery\models\Gallery;
 $form->field($model, 'gallery'])->widget(Gallery::className(), [
   'columns' => [
       'status' => [
           'title' => 'Status',
-          'displayType' => 'dropdown',
+          'displayType' => Gallery::SYA_TYPE_COLUMN_DROPDOWN,
           'items' => [
               '0' => 'Ẩn',
               '1' => 'Hiện'

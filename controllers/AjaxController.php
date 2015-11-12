@@ -6,6 +6,7 @@ use sya\gallery\Gallery;
 use Yii;
 use sya\gallery\helpers\FileHelper;
 use yii\bootstrap\Html;
+use yii\helpers\ArrayHelper;
 
 class AjaxController extends \yii\web\Controller{
     
@@ -19,12 +20,28 @@ class AjaxController extends \yii\web\Controller{
         
         // Module upload
         $module = Yii::$app->request->post('module');
-        
+
+        // Title
+        $title = Yii::$app->request->post('title');
+
+        // Caption
+        $caption = Yii::$app->request->post('caption');
+
+        // Alt text
+        $alt_text = Yii::$app->request->post('alt_text');
+
         // Cac truong cua image
         $columns = \yii\helpers\Json::decode(Yii::$app->request->post('columns'));
         
         // danh sach cac anh duoc upload
         $gallery = [];
+
+        // Column defalt image
+        $columnsDefault = [
+            'title' => $title,
+            'caption' => $caption,
+            'alt_text' => $alt_text
+        ];
 
         // Id cua gallery
         $id = uniqid('g_');
@@ -42,15 +59,15 @@ class AjaxController extends \yii\web\Controller{
                 $ext = FileHelper::getExtention($image);
                 if (!empty($ext)) {
                     $fileDir = strtolower($module) . '/' . date('Y/m/d/');
-                    $fileName = uniqid() . '.' . $ext;
+                    $fileName = pathinfo($image, PATHINFO_BASENAME);
                     $folder = Yii::getAlias(Yii::$app->getModule('gallery')->syaDirPath) . Yii::$app->getModule('gallery')->syaDirUpload . '/' . $fileDir;
                     FileHelper::createDirectory($folder);
                     $image->saveAs($folder . $fileName);
 
-                    $gallery[$id] = [
+                    $gallery[$id] = ArrayHelper::merge([
                         'url' => $fileDir . $fileName,
                         'type' => $type
-                    ];
+                    ], $columnsDefault);
                 }
             }
             
@@ -61,10 +78,10 @@ class AjaxController extends \yii\web\Controller{
             if (empty($image))
                 return;
 
-            $gallery[$id] = [
+            $gallery[$id] = ArrayHelper::merge([
                 'url' => $image,
                 'type' => $type
-            ];
+            ], $columnsDefault);
 
             $template = \sya\gallery\models\Gallery::generateGalleryTemplate($gallery, $module, $columns);
         } elseif ($type == Gallery::TYPE_PATH) {
@@ -78,10 +95,10 @@ class AjaxController extends \yii\web\Controller{
             if (!empty($image) && is_array($images)) {
                 foreach ($images as $img){
                     $id = uniqid('g_');
-                    $gallery[$id] = [
+                    $gallery[$id] = ArrayHelper::merge([
                         'url' => $img,
                         'type' => $type
-                    ];
+                    ], $columnsDefault);
                 }
             }
 
@@ -93,12 +110,23 @@ class AjaxController extends \yii\web\Controller{
     }
 
     public function actionGetimagepreview() {
+        // Image
         $image = Yii::$app->request->post('image');
 
         if (empty($image))
             return;
 
         echo \sya\gallery\models\Gallery::generateInsertFromUrl($image);
+    }
+
+    public function actionGetinfoimage() {
+        // Image
+        $image = Yii::$app->request->post('image');
+
+        if (empty($image))
+            return;
+
+        echo \sya\gallery\models\Gallery::generatePreviewImage($image);
     }
 
     /**

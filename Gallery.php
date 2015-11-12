@@ -11,7 +11,7 @@ class Gallery extends \yii\widgets\InputWidget {
     CONST TYPE_UPLOAD = 'upload';
     CONST TYPE_URL = 'url';
     CONST TYPE_PATH = 'path';
-    
+
     /**
      * Thong tin cua image
      * $columns = [
@@ -28,57 +28,116 @@ class Gallery extends \yii\widgets\InputWidget {
      *           'displayType' => 'text'
      *       ],
      * ]
-     * 
+     *
      * @var array
      */
     public $columns = [];
-    
+
+    /**
+     * @var bool
+     */
+    public $multiple = true;
+
     // Ten model
     private $moduleName;
-    
+
     public function init() {
         $this->moduleName = \yii\helpers\StringHelper::basename(get_class($this->model));
+
         $this->registerAssets();
     }
 
     public function run() {
         $galleries = Html::getAttributeValue($this->model, $this->attribute);
-        
+
         return $this->render('gallery', [
             'moduleName' => $this->moduleName,
             'columns' => $this->columns,
             'galleries' => $galleries,
         ]);
     }
-    
+
     private function registerAssets(){
         GalleryAssets::register($this->getView());
 
+        $multipleGallery = null;
+        if (!$this->multiple)
+            $multipleGallery = '$($(element).parents(".sya_media_library").find(".active")).removeClass("active"); $("#image").val("");';
+
         $this->getView()->registerJs('
-            function syainsertImagePath(element){
-                var data = $("#let_galleries").val();
-                if (data == ""){
-                    $("#let_galleries").val($(element).attr("id"));
+            function syaPreviewImage(element){
+                var listImage = $("#image").val().split(","),
+                    imagesSelected = [],
+                    image = $(element).attr("id");
+                if (!$(element).parent().hasClass("active")) {
+                    $.ajax({
+                        url: "' . \yii\helpers\Url::to(['/gallery/ajax/getinfoimage']) . '",
+                        type: "post",
+                        data: {image: image},
+                    }).done(function (data) {
+                        $("#sya_gallery_viewpath").html(data);
+                    });
+                    ' . $multipleGallery . '
+
+                    // Add image for input
+                    if ($("#image").val().length && listImage.length){
+                        var updateImage = false;
+                        for(i = 0; i < listImage.length; i++){
+                            if (listImage[i] == image){
+                                updateImage = true;
+                            }
+                            imagesSelected[i] = listImage[i];
+                        }
+
+                        if (!updateImage){
+                            imagesSelected[imagesSelected.length] = image;
+                        }
+                    }
+
+                    $("#image").val(imagesSelected.length ? imagesSelected.join() : image);
+
+                    $(element).parent().addClass("active");
                 } else {
-                    $("#let_galleries").val(data.concat("," + $(element).attr("id")));
+                    if ($("#image").val().length && listImage.length){
+                        for(i = 0; i < listImage.length; i++){
+                            if (listImage[i] == image){
+                                listImage.splice(i, 1);
+                            }
+                        }
+                    }
+
+                    $("#image").val(listImage.length ? listImage.join() : "");
+
+                    $(element).parent().removeClass("active");
+                    $("#sya_gallery_viewpath").html("");
                 }
             }
 
             function addImageByGallery(type){
                 var module = "' . $this->moduleName . '",
                     columns = \'' . \yii\helpers\Json::encode($this->columns) . '\',
-                    image = $("#image").val();
+                    image = $("#image").val(),
+                    title = $("#sya_preview_title").val(),
+                    caption = $("#sya_preview_caption").val(),
+                    alt_text = $("#sya_preview_alt_text").val();
 
-                $.ajax({
-                    url: "' . \yii\helpers\Url::to(['/gallery/ajax/additemimage']) . '",
-                    type: "post",
-                    data: {type: type, module: module, columns: columns, image: image},
-                }).done(function (data) {
-                    if (data.length > 0) {
-                        $("#tableImage").append(data);
-                        $("#sya_gallery_modal").modal("hide");
-                    }
-                });
+                if (image.length > 0) {
+                    $.ajax({
+                        url: "' . \yii\helpers\Url::to(['/gallery/ajax/additemimage']) . '",
+                        type: "post",
+                        data: {type: type, module: module, columns: columns, image: image, title: title, caption: caption, alt_text: alt_text},
+                    }).done(function (data) {
+                        if (data.length > 0) {
+                            $("#tableImage").append(data);
+                            $("#sya_gallery_modal").modal("hide");
+
+                            // Reset value
+                            $("#sya_gallery_path").find(".active").removeClass("active");
+                            $("#sya_gallery_viewpath").html("");
+                            $(".sya_image_input").val("");
+                        }
+                    });
+                }
             }
             
             // Ham xoa anh
@@ -117,7 +176,7 @@ class Gallery extends \yii\widgets\InputWidget {
                 });
             }
         ', \yii\web\View::POS_END);
-        
+
         $this->getView()->registerJs('
             // Sap xep anh
             $("#tableImage").sortable({});
@@ -149,7 +208,7 @@ class Gallery extends \yii\widgets\InputWidget {
                         formData.enctype = "multipart/form-data";
                     });
 
-                    this.on("successmultiple", function(files, responseText, e) {
+                    this.on("complete", function(files, responseText, e) {
                         syaGetGalleryByPath();
                         $(".custom_modal_gallery a[data-type=\'' . self::TYPE_PATH . '\']").tab("show");
                         $(".sya_media_library").prepend(responseText);
@@ -158,16 +217,22 @@ class Gallery extends \yii\widgets\InputWidget {
             }
 
             $(".custom_modal_gallery a[data-toggle=\'tab\']").on("shown.bs.tab", function (e) {
+                var tabs = $(e.target).parents(".tabs-left"),
+                    image = tabs.find(".active").find(".sya_image_input");
+
                 if ($(".sya_media_library").children().length <= 0 && $(e.target).attr("data-type") == "' . self::TYPE_PATH . '"){
                     syaGetGalleryByPath();
                 }
 
-                $("#insert_image").attr("data-type", $(e.target).attr("data-type"));
                 // Forcus input
-                $(e.target).parents(".tabs-container").find("#image").focus();
+                image.focus();
+                tabs.find(".sya_image_input").removeAttr("id");
+                image.attr("id", "image");
+
+                $("#insert_image").attr("data-type", $(e.target).attr("data-type"));
             })
 
-            $("#image").on("input",function(e){
+            $(".sya_input_info_image").on("input",function(e){
                 $.ajax({
                     url: "' . \yii\helpers\Url::to(['/gallery/ajax/getimagepreview']) . '",
                     type: "post",
