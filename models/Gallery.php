@@ -2,11 +2,11 @@
 
 namespace sya\gallery\models;
 
-use kartik\daterange\DateRangePicker;
 use Yii;
 use yii\bootstrap\Html;
 use sya\gallery\helpers\FileHelper;
 use yii\helpers\ArrayHelper;
+use sya\gallery\Gallery as GalleryDashBroad;
 
 class Gallery extends \yii\mongodb\ActiveRecord
 {
@@ -51,75 +51,152 @@ class Gallery extends \yii\mongodb\ActiveRecord
     public static function generateGalleryTemplate($galleries, $module, $columns = []){
         $templateGallery = '';
         foreach ($galleries as $galleryId => $gallery) {
-            // Gia tri mac dinh cua image
-            $urlImg = ArrayHelper::getValue($gallery, 'url');
-            $type = ArrayHelper::getValue($gallery, 'type');
-            $title = ArrayHelper::getValue($gallery, 'title');
-            $caption = ArrayHelper::getValue($gallery, 'caption');
-            $alt_text = ArrayHelper::getValue($gallery, 'alt_text');
-            $options = ArrayHelper::getValue($gallery, 'options', []);
-
-            $optionsDefault = ['class' => 'text-center', 'style' => 'vertical-align: middle;'];
-
-            $options = ArrayHelper::merge($optionsDefault, $options);
-
             // Tao giao dien cho cac image
-            $templateGallery .= Html::beginTag('tr', ['id' => 'imageItem', 'style' => 'width: 100%; background: white;']);
-                $templateGallery .= Html::beginTag('td', ['class' => 'text-center', 'style' => 'vertical-align: middle;']);
-                    $templateGallery .= self::generateImageByType($urlImg, $type);
-                $templateGallery .= Html::endTag('td');
-
-                // Type upload hidden
-                $templateGallery .= Html::hiddenInput($module . '[gallery][' . $galleryId . '][type]', $type, ['class' => 'form-control']);
-
-                // Infomation image
-                $templateGallery .= Html::beginTag('td', ['class' => 'text-center', 'style' => 'vertical-align: middle;']);
-                    // Url
-                    $templateGallery .= Html::beginTag('div', ['class' => 'form-group field-gallery-url']);
-                        $templateGallery .= Html::tag('label', 'Url', ['class' => 'control-label col-sm-3']);
-                        $templateGallery .= Html::beginTag('div', ['class' => 'col-sm-9']);
-                            $templateGallery .= Html::textInput($module . '[gallery][' . $galleryId . '][url]', $urlImg, ['class' => 'form-control', 'readonly' => true]);
-                        $templateGallery .= Html::endTag('div');
-                    $templateGallery .= Html::endTag('div');
-
-                    // Title
-                    $templateGallery .= Html::beginTag('div', ['class' => 'form-group field-gallery-url']);
-                        $templateGallery .= Html::tag('label', 'Title', ['class' => 'control-label col-sm-3']);
-                        $templateGallery .= Html::beginTag('div', ['class' => 'col-sm-9']);
-                            $templateGallery .= Html::textInput($module . '[gallery][' . $galleryId . '][title]', $title, ['class' => 'form-control']);
-                        $templateGallery .= Html::endTag('div');
-                    $templateGallery .= Html::endTag('div');
-
-                    // Caption
-                    $templateGallery .= Html::beginTag('div', ['class' => 'form-group field-gallery-caption']);
-                        $templateGallery .= Html::tag('label', 'Caption', ['class' => 'control-label col-sm-3']);
-                        $templateGallery .= Html::beginTag('div', ['class' => 'col-sm-9']);
-                            $templateGallery .= Html::textarea($module . '[gallery][' . $galleryId . '][caption]', $caption, ['class' => 'form-control']);
-                        $templateGallery .= Html::endTag('div');
-                    $templateGallery .= Html::endTag('div');
-
-                    // Alt text
-                    $templateGallery .= Html::beginTag('div', ['class' => 'form-group field-gallery-alt-text']);
-                        $templateGallery .= Html::tag('label', 'Alt text', ['class' => 'control-label col-sm-3']);
-                        $templateGallery .= Html::beginTag('div', ['class' => 'col-sm-9']);
-                            $templateGallery .= Html::textInput($module . '[gallery][' . $galleryId . '][alt_text]', $alt_text, ['class' => 'form-control']);
-                        $templateGallery .= Html::endTag('div');
-                    $templateGallery .= Html::endTag('div');
-                $templateGallery .= Html::endTag('td');
-
-                // Lay ra cac truong cua image
-                foreach ($columns as $keyColumn => $column) {
-                    $templateGallery .= self::generateColumnByType($keyColumn, $column, $gallery, $module, $galleryId, $options);
-                }
-
-                // Cac action xu ly cua image
-                $templateGallery .= Html::beginTag('td', ['class' => 'text-center', 'style' => 'vertical-align: middle;']);
-                    $templateGallery .= Html::button('<i class="fa fa-trash"></i>', ['class' => 'btn btn-white', 'onclick' => 'syaremoveImage(this);']);
-                $templateGallery .= Html::endTag('td');
-            $templateGallery .= Html::endTag('tr');
+            $templateGallery .= self::buildTemplateRow($gallery, $galleryId, $module, $columns);
         }
 
         return $templateGallery;
+    }
+
+    /**
+     * Function build template one row image
+     * @param $gallery Infomation for image
+     * @param $galleryId Id gallery
+     * @param $module Module name
+     * @param $columns Column extend image
+     * @return string
+     */
+    private function buildTemplateRow($gallery, $galleryId, $module, $columns){
+        // Gia tri mac dinh cua image
+        $urlImg = ArrayHelper::getValue($gallery, 'url');
+        $type = ArrayHelper::getValue($gallery, 'type');
+        $title = ArrayHelper::getValue($gallery, 'title');
+        $caption = ArrayHelper::getValue($gallery, 'caption');
+        $alt_text = ArrayHelper::getValue($gallery, 'alt_text');
+        $options = ArrayHelper::getValue($gallery, 'options', []);
+
+        $optionsDefault = ['class' => 'text-center', 'style' => 'vertical-align: middle;'];
+
+        $options = ArrayHelper::merge($optionsDefault, $options);
+
+        // Build layout image
+        $layouts = GalleryDashBroad::$infomationImage;
+        $replace = [];
+
+        if (strpos($layouts, '{image}') !== false) {
+            $imageTemplate = self::generateImageByType($urlImg, $type);
+            $replace['{image}'] = $imageTemplate;
+        }
+
+        if (strpos($layouts, '{typeImage}') !== false) {
+            $typeImageTemplate = Html::hiddenInput($module . '[gallery][' . $galleryId . '][type]', $type, ['class' => 'form-control']);
+            $replace['{typeImage}'] = $typeImageTemplate;
+        }
+
+        if (strpos($layouts, '{infomation}') !== false) {
+            $infomationTemplate = self::renderInfomationImage($galleryId, $module, $urlImg, $title, $caption, $alt_text);
+            $replace['{infomation}'] = $infomationTemplate;
+        }
+
+        if (strpos($layouts, '{columns}') !== false) {
+            $columnsTemplate = self::renderColumnsImage($columns, $gallery, $module, $galleryId, $options);
+
+            $replace['{columns}'] = $columnsTemplate;
+        }
+
+        if (strpos($layouts, '{actions}') !== false) {
+            $actionsTemplate = Html::button('<i class="fa fa-trash"></i>', ['class' => 'btn btn-white', 'onclick' => 'syaremoveImage(this);']);
+            $replace['{actions}'] = $actionsTemplate;
+        }
+
+        return strtr($layouts, $replace);
+    }
+
+    /**
+     * Function generate input form infomation image
+     * @param $galleryId Id gallery
+     * @param $module Module name
+     * @param $urlImg Url image
+     * @param $title Title image
+     * @param $caption Caption image
+     * @param $alt_text Alt text image
+     * @return null|string
+     */
+    private function renderInfomationImage($galleryId, $module, $urlImg, $title, $caption, $alt_text){
+        $template = null;
+
+        // config layout infomation image
+        $layouts = GalleryDashBroad::$infomationImageDetail;
+        $replace = [];
+
+        // Html attribute default input
+        $options = [
+            'class' => 'form-control'
+        ];
+
+        // Array column infomation for
+        $infomation = [
+            'url' => [
+                'label' => 'Url',
+                'value' => $urlImg,
+                'options' => ArrayHelper::merge([
+                    'readonly' => true
+                ], $options)
+            ],
+            'title' => [
+                'label' => 'Title',
+                'value' => $title,
+                'options' => $options
+            ],
+            'caption' => [
+                'label' => 'Caption',
+                'value' => $caption,
+                'options' => $options
+            ],
+            'alt_text' => [
+                'label' => 'Alt text',
+                'value' => $alt_text,
+                'options' => $options
+            ],
+        ];
+
+        foreach ($infomation as $nameColumns => $info) {
+            $label = ArrayHelper::getValue($info, 'label');
+            $value = ArrayHelper::getValue($info, 'value');
+            $options = ArrayHelper::getValue($info, 'options');
+
+            if (strpos($layouts, '{title}') !== false) {
+                $titleTemplate = $label;
+                $replace['{title}'] = $titleTemplate;
+            }
+
+            if (strpos($layouts, '{fieldInput}') !== false) {
+                $fileTemplate = Html::textInput($module . '[gallery][' . $galleryId . '][' . $nameColumns . ']', $value, $options);
+                $replace['{fieldInput}'] = $fileTemplate;
+            }
+
+            $template .= strtr($layouts, $replace);
+        }
+
+        return $template;
+    }
+
+    /**
+     * Function generate column infomation for image
+     * @param $columns Infomation extend for image
+     * @param $gallery Infomation default for image
+     * @param $module Module name for image
+     * @param $galleryId Id gallery image
+     * @param $options Html attribute column for image
+     * @return null|string
+     */
+    private function renderColumnsImage($columns, $gallery, $module, $galleryId, $options){
+        $template = null;
+        foreach ($columns as $keyColumn => $column) {
+            $template .= self::generateColumnByType($keyColumn, $column, $gallery, $module, $galleryId, $options);
+        }
+
+        return $template;
     }
 
     /**
@@ -169,7 +246,7 @@ class Gallery extends \yii\mongodb\ActiveRecord
 
         $template = null;
         switch ($type) {
-            case \sya\gallery\Gallery::TYPE_URL:
+            case GalleryDashBroad::TYPE_URL:
                 $template = Html::img($urlImg, $options);
                 break;
             default:
