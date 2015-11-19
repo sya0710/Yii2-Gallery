@@ -23,6 +23,8 @@ class AjaxController extends \yii\web\Controller{
         // Module upload
         $module = Yii::$app->request->post('module');
 
+        $attribute = Yii::$app->request->post('attribute');
+
         // Title
         $title = Yii::$app->request->post('title');
 
@@ -104,7 +106,7 @@ class AjaxController extends \yii\web\Controller{
                 }
             }
 
-            $template = GalleryModel::generateGalleryTemplate($gallery, $module, $columns);
+            $template = GalleryModel::generateGalleryTemplate($gallery, $module, $attribute, $columns);
         }
         // End upload image
         

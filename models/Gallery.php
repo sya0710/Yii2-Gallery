@@ -45,14 +45,15 @@ class Gallery extends \yii\mongodb\ActiveRecord
      * Ham tao giao dien cho image
      * @param array $galleries mang cac gia tri cua image
      * @param string $module ten module dang su dung
+     * @param string $attribute ten attribute dang su dung
      * @param array $columns danh sach truong cua image
      * @return string
      */
-    public static function generateGalleryTemplate($galleries, $module, $columns = []){
+    public static function generateGalleryTemplate($galleries, $module, $attribute, $columns = []){
         $templateGallery = '';
         foreach ($galleries as $galleryId => $gallery) {
             // Tao giao dien cho cac image
-            $templateGallery .= self::buildTemplateRow($gallery, $galleryId, $module, $columns);
+            $templateGallery .= self::buildTemplateRow($gallery, $galleryId, $module, $attribute, $columns);
         }
 
         return $templateGallery;
@@ -63,10 +64,11 @@ class Gallery extends \yii\mongodb\ActiveRecord
      * @param $gallery Infomation for image
      * @param $galleryId Id gallery
      * @param $module Module name
+     * @param $attribute Attribute name
      * @param $columns Column extend image
      * @return string
      */
-    private function buildTemplateRow($gallery, $galleryId, $module, $columns){
+    private function buildTemplateRow($gallery, $galleryId, $module, $attribute, $columns){
         // Gia tri mac dinh cua image
         $urlImg = ArrayHelper::getValue($gallery, 'url');
         $type = ArrayHelper::getValue($gallery, 'type');
@@ -89,17 +91,17 @@ class Gallery extends \yii\mongodb\ActiveRecord
         }
 
         if (strpos($layouts, '{typeImage}') !== false) {
-            $typeImageTemplate = Html::hiddenInput($module . '[gallery][' . $galleryId . '][type]', $type, ['class' => 'form-control']);
+            $typeImageTemplate = Html::hiddenInput($module . '[' . $attribute . '][' . $galleryId . '][type]', $type, ['class' => 'form-control']);
             $replace['{typeImage}'] = $typeImageTemplate;
         }
 
         if (strpos($layouts, '{infomation}') !== false) {
-            $infomationTemplate = self::renderInfomationImage($galleryId, $module, $urlImg, $title, $caption, $alt_text);
+            $infomationTemplate = self::renderInfomationImage($galleryId, $module, $attribute, $urlImg, $title, $caption, $alt_text);
             $replace['{infomation}'] = $infomationTemplate;
         }
 
         if (strpos($layouts, '{columns}') !== false) {
-            $columnsTemplate = self::renderColumnsImage($columns, $gallery, $module, $galleryId, $options);
+            $columnsTemplate = self::renderColumnsImage($columns, $gallery, $module, $attribute, $galleryId, $options);
 
             $replace['{columns}'] = $columnsTemplate;
         }
@@ -116,13 +118,14 @@ class Gallery extends \yii\mongodb\ActiveRecord
      * Function generate input form infomation image
      * @param $galleryId Id gallery
      * @param $module Module name
+     * @param $attribute Attribute name
      * @param $urlImg Url image
      * @param $title Title image
      * @param $caption Caption image
      * @param $alt_text Alt text image
      * @return null|string
      */
-    private function renderInfomationImage($galleryId, $module, $urlImg, $title, $caption, $alt_text){
+    private function renderInfomationImage($galleryId, $module, $attribute, $urlImg, $title, $caption, $alt_text){
         $template = null;
 
         // config layout infomation image
@@ -171,7 +174,7 @@ class Gallery extends \yii\mongodb\ActiveRecord
             }
 
             if (strpos($layouts, '{fieldInput}') !== false) {
-                $fileTemplate = Html::textInput($module . '[gallery][' . $galleryId . '][' . $nameColumns . ']', $value, $options);
+                $fileTemplate = Html::textInput($module . '[' . $attribute . '][' . $galleryId . '][' . $nameColumns . ']', $value, $options);
                 $replace['{fieldInput}'] = $fileTemplate;
             }
 
@@ -186,14 +189,15 @@ class Gallery extends \yii\mongodb\ActiveRecord
      * @param $columns Infomation extend for image
      * @param $gallery Infomation default for image
      * @param $module Module name for image
+     * @param $attribute Attribute name for image
      * @param $galleryId Id gallery image
      * @param $options Html attribute column for image
      * @return null|string
      */
-    private function renderColumnsImage($columns, $gallery, $module, $galleryId, $options){
+    private function renderColumnsImage($columns, $gallery, $module, $attribute, $galleryId, $options){
         $template = null;
         foreach ($columns as $keyColumn => $column) {
-            $template .= self::generateColumnByType($keyColumn, $column, $gallery, $module, $galleryId, $options);
+            $template .= self::generateColumnByType($keyColumn, $column, $gallery, $module, $attribute, $galleryId, $options);
         }
 
         return $template;
@@ -263,15 +267,16 @@ class Gallery extends \yii\mongodb\ActiveRecord
      * @param array $column mang setting cua column
      * @param array $gallery mang gia tri cua image
      * @param string $module ten module dang su dung
+     * @param string $attribute ten atrribute dang su dung
      * @param string $id id cua 1 anh
      * @param string $tdOptions Html Attribute of td column
      * @return string
      */
-    private static function generateColumnByType($keyColumn, $column, $gallery, $module, $id, $tdOptions = []){
+    private static function generateColumnByType($keyColumn, $column, $gallery, $module, $attribute, $id, $tdOptions = []){
         $typeImage = ArrayHelper::getValue($column, 'displayType', 'text');
         $items = ArrayHelper::getValue($column, 'items', []);
         $options = ArrayHelper::getValue($column, 'options', ['class' => 'form-control']);
-        $column_name = $module . '[gallery][' . $id . '][' . $keyColumn . ']';
+        $column_name = $module . '[' . $attribute . '][' . $id . '][' . $keyColumn . ']';
 
         switch ($typeImage) {
             case self::SYA_TYPE_COLUMN_DROPDOWN:
