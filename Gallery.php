@@ -9,9 +9,9 @@ use yii\helpers\StringHelper;
 use yii\web\View;
 use yii\helpers\Json;
 use yii\helpers\ArrayHelper;
-use sya\gallery\models\Gallery as GalleryModel;
 use yii\bootstrap\Modal;
 use yii\bootstrap\Tabs;
+use sya\gallery\helpers\FileHelper;
 
 class Gallery extends \yii\widgets\InputWidget {
 
@@ -19,6 +19,26 @@ class Gallery extends \yii\widgets\InputWidget {
     CONST TYPE_UPLOAD = 'upload';
     CONST TYPE_URL = 'url';
     CONST TYPE_PATH = 'path';
+
+    // Type column html
+    CONST SYA_TYPE_COLUMN_DROPDOWN = 'dropdown';
+    CONST SYA_TYPE_COLUMN_TEXTAREA = 'textarea';
+    CONST SYA_TYPE_COLUMN_RADIO = 'radio';
+    CONST SYA_TYPE_COLUMN_RADIOLIST = 'radioList';
+    CONST SYA_TYPE_COLUMN_CHECKBOX = 'checkbox';
+    CONST SYA_TYPE_COLUMN_CHECKBOXLIST = 'checkboxList';
+    CONST SYA_TYPE_COLUMN_HIDDEN = 'hidden';
+    CONST SYA_TYPE_COLUMN_INPUT = 'text';
+
+    private static $fileType = [
+        'jpg',
+        'gif',
+        'png'
+    ];
+
+    private static $countFileItem = 0;
+
+    private static $countFileItemLimit = 0;
 
     /**
      * @var string Tag container header column
@@ -66,7 +86,7 @@ class Gallery extends \yii\widgets\InputWidget {
     <!-- End Display image gallery -->
 HTML;
 
-    public static $infomationImage = <<< HTML
+    public $infomationImage = <<< HTML
     <tr id="imageItem" style="width: 100%; background: white;">
         <td class="text-center" style="vertical-align: middle;">{image}</td>
         {typeImage}
@@ -76,14 +96,12 @@ HTML;
     </tr>
 HTML;
 
-    public static $infomationImageDetail = <<< HTML
-        <div class="form-group field-gallery-url">
-            <label class="control-label col-sm-3">{title}</label>
-            <div class="col-sm-9">{fieldInput}</div>
-        </div>
+    public $infomationImageDetail = <<< HTML
+    <div class="form-group field-gallery-url">
+        <label class="control-label col-sm-3">{title}</label>
+        <div class="col-sm-9">{fieldInput}</div>
+    </div>
 HTML;
-
-
 
     /**
      * Thong tin cua image
@@ -156,13 +174,17 @@ HTML;
         $this->layouts = strtr($this->layouts, $replace);
     }
 
+    /**
+     * @param $template String template gallery
+     * @throws \Exception
+     */
     protected function renderLayout($template){
         // Display button add image and modal add image
         Modal::begin([
-            'header' => Yii::t('yii', 'Add Image'),
+            'header' => Yii::t('gallery', 'Add Image'),
             'footer' => '<button class="btn btn-success" id="insert_image" data-type="' . self::TYPE_UPLOAD . '">' . Yii::t('yii', 'Insert Image'),
             'toggleButton' => [
-                'label' => Yii::t('yii', 'Add Image'),
+                'label' => Yii::t('gallery', 'Add Image'),
                 'class' => 'btn btn-success'
             ],
             'size' => 'modal-lg custom_modal_gallery',
@@ -177,7 +199,7 @@ HTML;
                         'encodeLabels' => false,
                         'items' => [
                             [
-                                'label' => Yii::t('yii', 'Insert Media'),
+                                'label' => Yii::t('gallery', 'Insert Media'),
                                 'content' => '<div class="panel-body"><div id="my-awesome-dropzone" class="dropzone sya_custom_dropzone">
                                                     <div class="dropzone-previews"></div>
                                                 </div></div>',
@@ -217,6 +239,7 @@ HTML;
                 echo Html::endTag('div');
             echo Html::endTag('div');
         Modal::end(); // End Display button add image and modal add image
+
         echo $template;
     }
 
@@ -238,13 +261,17 @@ HTML;
         }
     }
 
+    /**
+     * Function generate column for image
+     * @return null|string
+     */
     protected function renderColumns(){
         $template = null;
         foreach ($this->columns as $column){
-            $typeImage = ArrayHelper::getValue($column, 'displayType', GalleryModel::SYA_TYPE_COLUMN_INPUT);
+            $typeImage = ArrayHelper::getValue($column, 'displayType', self::SYA_TYPE_COLUMN_INPUT);
             $titleColumn = ArrayHelper::getValue($column, 'title');
 
-            if ($typeImage != GalleryModel::SYA_TYPE_COLUMN_HIDDEN) {
+            if ($typeImage != self::SYA_TYPE_COLUMN_HIDDEN) {
                 $template .= Html::tag($this->tagHeaderColumns, $titleColumn, $this->tagHeaderOptions);
             }
         }
@@ -252,38 +279,509 @@ HTML;
         return $template;
     }
 
+    /**
+     * Function render infomation basic for image
+     * @return null|string
+     */
     protected function renderInfomation(){
         $template = null;
         $galleries = Html::getAttributeValue($this->model, $this->attribute);
 
         if (!empty($galleries)){
-            $template .= GalleryModel::generateGalleryTemplate($galleries, $this->moduleName, $this->attribute, $this->columns);
+            $template .= $this->generateGalleryTemplate($galleries, $this->columns, $this->moduleName, $this->attribute, $this->infomationImage, $this->infomationImageDetail);
         }
 
+        return $template;
+    }
+
+    /**
+     * Ham tao giao dien cho image
+     * @param array $galleries mang cac gia tri cua image
+     * @param array $columns danh sach truong cua image
+     * @param string $module Module name
+     * @param string $attribute Attribute name
+     * @param string $template Template infomation image
+     * @param string $templateInfomationDetail Template infomation detail image
+     * @return string
+     */
+    public static function generateGalleryTemplate($galleries, $columns = [], $module, $attribute, $template = null, $templateInfomationDetail = null){
+        $templateGallery = '';
+        foreach ($galleries as $galleryId => $gallery) {
+            // Tao giao dien cho cac image
+            $templateGallery .= self::buildTemplateRow($gallery, $galleryId, $module, $attribute, $columns, $template, $templateInfomationDetail);
+        }
+
+        return $templateGallery;
+    }
+
+    /**
+     * Function build template one row image
+     * @param $gallery Infomation for image
+     * @param $galleryId Id gallery
+     * @param $columns Column extend image
+     * @param string $template Template infomation image
+     * @param string $templateInfomationDetail Template infomation detail image
+     * @return string
+     */
+    private function buildTemplateRow($gallery, $galleryId, $module, $attribute, $columns, $template, $templateInfomationDetail){
+        // Gia tri mac dinh cua image
+        $urlImg = ArrayHelper::getValue($gallery, 'url');
+        $type = ArrayHelper::getValue($gallery, 'type');
+        $title = ArrayHelper::getValue($gallery, 'title');
+        $caption = ArrayHelper::getValue($gallery, 'caption');
+        $alt_text = ArrayHelper::getValue($gallery, 'alt_text');
+        $options = ArrayHelper::getValue($gallery, 'options', []);
+
+        $optionsDefault = ['class' => 'text-center', 'style' => 'vertical-align: middle;'];
+
+        $options = ArrayHelper::merge($optionsDefault, $options);
+
+        // Build layout image
+        $layouts = $template;
+        $replace = [];
+
+        if (strpos($layouts, '{image}') !== false) {
+            $imageTemplate = self::generateImageByType($urlImg, $type);
+            $replace['{image}'] = $imageTemplate;
+        }
+
+        if (strpos($layouts, '{typeImage}') !== false) {
+            $typeImageTemplate = Html::hiddenInput($module . '[' . $attribute . '][' . $galleryId . '][type]', $type, ['class' => 'form-control']);
+            $replace['{typeImage}'] = $typeImageTemplate;
+        }
+
+        if (strpos($layouts, '{infomation}') !== false) {
+            $infomationTemplate = self::renderInfomationImage($galleryId, $urlImg, $title, $caption, $alt_text, $module, $attribute, $templateInfomationDetail);
+            $replace['{infomation}'] = $infomationTemplate;
+        }
+
+        if (strpos($layouts, '{columns}') !== false) {
+            $columnsTemplate = self::renderColumnsImage($columns, $gallery, $galleryId, $options, $module, $attribute);
+
+            $replace['{columns}'] = $columnsTemplate;
+        }
+
+        if (strpos($layouts, '{actions}') !== false) {
+            $actionsTemplate = Html::button('<i class="fa fa-trash"></i>', ['class' => 'btn btn-white', 'onclick' => 'syaremoveImage(this);']);
+            $replace['{actions}'] = $actionsTemplate;
+        }
+
+        return strtr($layouts, $replace);
+    }
+
+    /**
+     * Function generate input form infomation image
+     * @param $galleryId Id gallery
+     * @param $urlImg Url image
+     * @param $title Title image
+     * @param $caption Caption image
+     * @param $alt_text Alt text image
+     * @param string $templateInfomationDetail Template infomation detail image
+     * @return null|string
+     */
+    private function renderInfomationImage($galleryId, $urlImg, $title, $caption, $alt_text, $module, $attribute, $templateInfomationDetail){
+        $template = null;
+
+        // config layout infomation image
+        $layouts = $templateInfomationDetail;
+        $replace = [];
+
+        // Html attribute default input
+        $options = [
+            'class' => 'form-control'
+        ];
+
+        // Array column infomation for
+        $infomation = [
+            'url' => [
+                'label' => 'Url',
+                'value' => $urlImg,
+                'options' => ArrayHelper::merge([
+                    'readonly' => true
+                ], $options)
+            ],
+            'title' => [
+                'label' => 'Title',
+                'value' => $title,
+                'options' => $options
+            ],
+            'caption' => [
+                'label' => 'Caption',
+                'value' => $caption,
+                'options' => $options
+            ],
+            'alt_text' => [
+                'label' => 'Alt text',
+                'value' => $alt_text,
+                'options' => $options
+            ],
+        ];
+
+        foreach ($infomation as $nameColumns => $info) {
+            $label = ArrayHelper::getValue($info, 'label');
+            $value = ArrayHelper::getValue($info, 'value');
+            $options = ArrayHelper::getValue($info, 'options');
+
+            if (strpos($layouts, '{title}') !== false) {
+                $titleTemplate = $label;
+                $replace['{title}'] = $titleTemplate;
+            }
+
+            if (strpos($layouts, '{fieldInput}') !== false) {
+                $fileTemplate = Html::textInput($module . '[' . $attribute . '][' . $galleryId . '][' . $nameColumns . ']', $value, $options);
+                $replace['{fieldInput}'] = $fileTemplate;
+            }
+
+            $template .= strtr($layouts, $replace);
+        }
+
+        return $template;
+    }
+
+    /**
+     * Function generate column infomation for image
+     * @param $columns Infomation extend for image
+     * @param $gallery Infomation default for image
+     * @param $galleryId Id gallery image
+     * @param $options Html attribute column for image
+     * @return null|string
+     */
+    private function renderColumnsImage($columns, $gallery, $galleryId, $options, $module, $attribute){
+        $template = null;
+        foreach ($columns as $keyColumn => $column) {
+            $template .= self::generateColumnByType($keyColumn, $column, $gallery, $galleryId, $options, $module, $attribute);
+        }
+
+        return $template;
+    }
+
+    /**
+     * Function Gen template gallery by path upload
+     * @param array $galleries Array item image
+     * @return string
+     */
+    public static function generateGalleryTemplateByPath($galleries){
+        $templateGallery = '';
+        foreach ($galleries as $galleryId => $gallery) {
+            // Gia tri mac dinh cua image
+            $urlImg = ArrayHelper::getValue($gallery, 'url');
+
+            $templateGallery .= self::_generateGalleryTemplateByPath($urlImg, Yii::$app->getModule('gallery')->syaDirUpload . DIRECTORY_SEPARATOR . $urlImg);
+        }
+
+        return $templateGallery;
+    }
+
+    /**
+     * Function gen template one image by path
+     * @param $imgPath Path of image
+     * @param $imgPathFull Path full of image
+     * @return string
+     */
+    private static function _generateGalleryTemplateByPath($imgPath, $imgPathFull){
+        $template = Html::beginTag('div', ['class' => 'col-md-3 col-lg-3 text-center']);
+            $template .= Html::icon('ok', ['class' => 'icon-active sya_remove_img', 'onclick' => 'removeImageByGallery($(this).next());']);
+
+            $infomation_images = Json::encode([
+                'url' => $imgPath,
+                'title' => reset(explode('.', end(explode('/', $imgPath)))),
+                'caption' => '',
+                'alt_text' => '',
+            ]);
+
+            // View image
+            $template .= Html::beginTag('div', ['class' => 'letImgPreview', 'id' => $imgPath, 'data-info' => $infomation_images, 'onclick' => 'syaPreviewImage(this);']);
+                $template .= Html::img('@web/' . $imgPathFull, ['style' => 'max-width: 100%;']);
+            $template .= Html::endTag('div');
+        $template .= Html::endTag('div');
+
+        return $template;
+    }
+
+    /**
+     * Ham lay ra anh theo kieu upload
+     * @param string $urlImg duong dan anh
+     * @param string $type kieu upload anh
+     * @return string
+     */
+    private static function generateImageByType($urlImg, $type){
+        $options = ['style' => 'width: 100px; height: 100px;'];
+
+        $template = null;
+        switch ($type) {
+            case self::TYPE_URL:
+                $template = Html::img($urlImg, $options);
+                break;
+            default:
+                $template = Html::img(FileHelper::getFileUploaded($urlImg), $options);
+                break;
+        }
+
+        return $template;
+    }
+
+    /**
+     * Ham tao giao dien cho column
+     * @param string $keyColumn ten truong cua column
+     * @param array $column mang setting cua column
+     * @param array $gallery mang gia tri cua image
+     * @param string $id id cua 1 anh
+     * @param string $tdOptions Html Attribute of td column
+     * @return string
+     */
+    private function generateColumnByType($keyColumn, $column, $gallery, $id, $tdOptions = [], $module, $attribute){
+        $typeImage = ArrayHelper::getValue($column, 'displayType', 'text');
+        $items = ArrayHelper::getValue($column, 'items', []);
+        $options = ArrayHelper::getValue($column, 'options', ['class' => 'form-control']);
+        $column_name = $module . '[' . $attribute . '][' . $id . '][' . $keyColumn . ']';
+
+        switch ($typeImage) {
+            case self::SYA_TYPE_COLUMN_DROPDOWN:
+                $template = Html::dropDownList($column_name, ArrayHelper::getValue($gallery, $keyColumn), $items, $options);
+                break;
+            case self::SYA_TYPE_COLUMN_TEXTAREA:
+                $template = Html::textarea($column_name, ArrayHelper::getValue($gallery, $keyColumn), $options);
+                break;
+            case self::SYA_TYPE_COLUMN_RADIO:
+                $template = Html::radio($column_name, ArrayHelper::getValue($gallery, $keyColumn), $options);
+                break;
+            case self::SYA_TYPE_COLUMN_RADIOLIST:
+                $template = Html::radioList($column_name, ArrayHelper::getValue($gallery, $keyColumn), $items, $options);
+                break;
+            case self::SYA_TYPE_COLUMN_CHECKBOX:
+                $template = Html::checkbox($column_name, ArrayHelper::getValue($gallery, $keyColumn), $options);
+                break;
+            case self::SYA_TYPE_COLUMN_CHECKBOXLIST:
+                $template = Html::checkboxList($column_name, ArrayHelper::getValue($gallery, $keyColumn), $items, $options);
+                break;
+            case self::SYA_TYPE_COLUMN_HIDDEN:
+                $tdOptions = ArrayHelper::merge($tdOptions, ['style' => 'display: none;']);
+                $template = Html::hiddenInput($column_name, ArrayHelper::getValue($gallery, $keyColumn), $options);
+                break;
+            default:
+                $template = Html::textInput($column_name, ArrayHelper::getValue($gallery, $keyColumn), $options);
+                break;
+        }
+
+        $templateGallery = Html::beginTag('td', $tdOptions);
+        $templateGallery .= $template;
+        $templateGallery .= Html::endTag('td');
+
+        return $templateGallery;
+    }
+
+    /**
+     * Ham tao giao dien upload anh truc tiep = url
+     * @param $image Url image
+     * @return string
+     */
+    public static function generateInsertFromUrl($image){
+        // Image preview
+        $template = Html::beginTag('div', ['class' => 'col-sm-12', 'style' => 'margin-top: -55px;']);
+            $template .= Html::img($image, ['id' => 'embed_image_url']);
+        $template .= Html::endTag('div');
+
+        // Caption image
+        $template .= Html::beginTag('div', ['class' => 'col-sm-12 embed_field']);
+            $template .= Html::beginTag('label', ['class' => 'row']);
+                $template .= Html::tag('span', 'Caption', ['class' => 'col-sm-12']);
+                $template .= Html::textarea('', '', ['class' => 'form-control col-sm-12']);
+            $template .= Html::endTag('label');
+        $template .= Html::endTag('div');
+
+        // Alt text image
+        $template .= Html::beginTag('div', ['class' => 'col-sm-12 embed_field']);
+            $template .= Html::beginTag('label', ['class' => 'row']);
+                $template .= Html::tag('span', 'Alt text', ['class' => 'col-sm-12']);
+                $template .= Html::input('text', '', '', ['class' => 'form-control col-sm-12']);
+            $template .= Html::endTag('label');
+        $template .= Html::endTag('div');
+
+        return $template;
+    }
+
+    /**
+     * Ham lay ra hinh anh trong website theo duong dan
+     * @param string $path duong dan chua anh
+     * @param int $page so trang
+     * @param int $limit gioi han lay bao nhieu anh 1 lan
+     * @param string $template hinh anh duoc lay ra tu thu muc upload
+     * @return null|string
+     */
+    public static function getGalleryByPath($path = '', $page = 1, $limit = 12, $template = ''){
+        if (!is_dir($path)) {
+            throw new InvalidParamException("The dir argument must be a directory: $path");
+        }
+
+        // So file can lay
+        $offset = $page * $limit;
+
+        // Duong dan chua anh
+        $rootPath = Yii::getAlias(Yii::$app->getModule('gallery')->syaDirPath);
+
+        // Thu muc upload
+        $dirPath = Yii::$app->getModule('gallery')->syaDirUpload;
+
+        if (!file_exists($path))
+            return null;
+
+        // Get all file and Sort file DESC time
+        $entrys = scandir($path, 1);
+
+        foreach ($entrys as $k => $entry) {
+            if (self::$countFileItem == $offset) {
+                self::$countFileItemLimit = 0;
+                break;
+            }
+
+            if (in_array($entry, ['.', '..', 'cache']))
+                continue;
+
+            $entryPath = $path . DIRECTORY_SEPARATOR . $entry;
+            if (is_dir($entryPath)) {
+                $template = self::getGalleryByPath($entryPath, $page, $limit, $template);
+            } else {
+                self::$countFileItem++;
+                self::$countFileItemLimit++;
+
+                if ($page !== 1 AND self::$countFileItemLimit + $limit <= $offset){
+                    continue;
+                }
+
+                if (in_array(end(explode('.', $entry)), self::$fileType)) {
+                    $imgPath = str_replace($rootPath . $dirPath . DIRECTORY_SEPARATOR, '', $entryPath);
+
+                    // Generate img by path gallery library
+                    $template .= self::_generateGalleryTemplateByPath($imgPath, $dirPath . DIRECTORY_SEPARATOR . $imgPath);
+                }
+            }
+        }
+
+        return $template;
+    }
+
+    /**
+     * Function generate preview infomation image
+     * @param $image Infomation image
+     * @return string
+     */
+    public static function generatePreviewImage($image){
+        $image =  Json::decode($image);
+        $url = ArrayHelper::getValue($image, 'url');
+        $title = ArrayHelper::getValue($image, 'title');
+        $caption = ArrayHelper::getValue($image, 'caption');
+        $alt_text = ArrayHelper::getValue($image, 'alt_text');
+
+        $imageUrl = Yii::getAlias('@web') . DIRECTORY_SEPARATOR . Yii::$app->getModule('gallery')->syaDirUpload . DIRECTORY_SEPARATOR . $url;
+        $imagePath = Yii::getAlias(Yii::$app->getModule('gallery')->syaDirPath) . Yii::$app->getModule('gallery')->syaDirUpload . DIRECTORY_SEPARATOR . $url;
+
+        $info = FileHelper::getInfomation($imagePath);
+        $basename = ArrayHelper::getValue($info, 'basename');
+        $filesize = ArrayHelper::getValue($info, 'filesize');
+        $fileatime = ArrayHelper::getValue($info, 'fileatime');
+        $width = ArrayHelper::getValue($info, 'width');
+        $height = ArrayHelper::getValue($info, 'height');
+
+        $template = Html::tag('h3', Yii::t('gallery', 'ATTACHMENT DETAILS'), []);
+
+        // Info img
+        $template .= Html::beginTag('div', ['class' => 'sya_info_galllery row']);
+            $template .= Html::beginTag('div', ['class' => 'col-md-6', 'style' => 'padding: 0;']);
+                $template .= Html::img($imageUrl, []);
+            $template .= Html::endTag('div');
+
+            $template .= Html::beginTag('div', ['class' => 'col-md-6', 'style' => 'padding: 0; word-break: break-word;']);
+                // File Name
+                $template .= Html::beginTag('div', ['style' => 'font-weight: bold;']);
+                    $template .= $basename;
+                $template .= Html::endTag('div');
+
+                $template .= Html::beginTag('div', []);
+                    $template .= date('d/m/Y', $fileatime);
+                $template .= Html::endTag('div');
+
+                // File size
+                $template .= Html::beginTag('div', []);
+                    $template .= $filesize;
+                $template .= Html::endTag('div');
+
+                $template .= Html::beginTag('div', []);
+                    $template .= $width . ' x ' . $height;
+                $template .= Html::endTag('div');
+            $template .= Html::endTag('div');
+        $template .= Html::endTag('div');
+
+        // Attribute img
+        $template .= Html::beginTag('div', ['class' => 'col-md-12 form-horizontal', 'style' => 'margin-top: 20px;']);
+            $template .= Html::beginForm(' ', ' ', ['id' => 'sya_gallery_form_preview']);
+                // Url
+                $template .= Html::beginTag('div', ['class' => 'form-group field-gallery-url']);
+                    $template .= Html::tag('label', 'Url', ['class' => 'control-label col-sm-3']);
+                    $template .= Html::beginTag('div', ['class' => 'col-sm-9']);
+                        $template .= Html::input('text', 'sya_url', $url, ['class' => 'col-sm-10 form-control', 'readonly' => true]);
+                    $template .= Html::endTag('div');
+                $template .= Html::endTag('div');
+
+                // Title
+                $template .= Html::beginTag('div', ['class' => 'form-group field-gallery-title']);
+                    $template .= Html::tag('label', 'Title', ['class' => 'control-label col-sm-3']);
+                    $template .= Html::beginTag('div', ['class' => 'col-sm-9']);
+                        $template .= Html::input('text', 'sya_title', $title, ['class' => 'col-sm-10 form-control', 'id' => 'sya_preview_title']);
+                    $template .= Html::endTag('div');
+                $template .= Html::endTag('div');
+
+                // Caption
+                $template .= Html::beginTag('div', ['class' => 'form-group field-gallery-caption']);
+                    $template .= Html::tag('label', 'Caption', ['class' => 'control-label col-sm-3']);
+                    $template .= Html::beginTag('div', ['class' => 'col-sm-9']);
+                        $template .= Html::textarea('sya_caption', $caption, ['class' => 'col-sm-10 form-control', 'id' => 'sya_preview_caption']);
+                    $template .= Html::endTag('div');
+                $template .= Html::endTag('div');
+
+                // Alt text
+                $template .= Html::beginTag('div', ['class' => 'form-group field-gallery-alt-text']);
+                    $template .= Html::tag('label', 'Alt text', ['class' => 'control-label col-sm-3']);
+                    $template .= Html::beginTag('div', ['class' => 'col-sm-9']);
+                        $template .= Html::input('text', 'sya_alt_text', $alt_text, ['class' => 'col-sm-10 form-control', 'id' => 'sya_preview_alt_text']);
+                    $template .= Html::endTag('div');
+                $template .= Html::endTag('div');
+            $template .= Html::endForm();
+        $template .= Html::endTag('div');
         return $template;
     }
 
     private function registerAssets(){
         GalleryAssets::register($this->getView());
 
-        $multipleGallery = null;
+        $singleGallery = [
+            'active' => null,
+            'noactive' => ''
+        ];
         if (!$this->multiple)
-            $multipleGallery = '$($(element).parents(".sya_media_library").find(".active")).removeClass("active"); $("#image").val("");';
+            $singleGallery = [
+                'active' => '$($(element).parents(".sya_media_library").find(".active")).removeClass("active"); $("#image").val("");',
+                'noactive' => ' else {
+                    removeImageByGallery(element);
+                }'
+            ];
 
         $this->getView()->registerJs('
             function syaPreviewImage(element){
-                var listImage = $("#image").val().split(","),
+                var listImage = $("#image").val().split(";"),
                     imagesSelected = [],
-                    image = $(element).attr("id");
+                    image = $(element).attr("data-info");
+
+                $.ajax({
+                    url: "' . Url::to(['/gallery/ajax/getinfoimage']) . '",
+                    type: "post",
+                    data: {image: image},
+                }).done(function (data) {
+                    $("#sya_gallery_viewpath").html(data);
+                    formChangeValue();
+                });
+
                 if (!$(element).parent().hasClass("active")) {
-                    $.ajax({
-                        url: "' . Url::to(['/gallery/ajax/getinfoimage']) . '",
-                        type: "post",
-                        data: {image: image},
-                    }).done(function (data) {
-                        $("#sya_gallery_viewpath").html(data);
-                    });
-                    ' . $multipleGallery . '
+                    ' . ArrayHelper::getValue($singleGallery, "active") . '
 
                     // Add image for input
                     if ($("#image").val().length && listImage.length){
@@ -300,39 +798,68 @@ HTML;
                         }
                     }
 
-                    $("#image").val(imagesSelected.length ? imagesSelected.join() : image);
+                    $("#image").val(imagesSelected.length ? imagesSelected.join(";") : image);
 
                     $(element).parent().addClass("active");
-                } else {
-                    if ($("#image").val().length && listImage.length){
-                        for(i = 0; i < listImage.length; i++){
-                            if (listImage[i] == image){
-                                listImage.splice(i, 1);
-                            }
+                }' . ArrayHelper::getValue($singleGallery, "noactive") . '
+            }
+
+            function formChangeValue(){
+                $("#sya_gallery_form_preview .form-control").keyup(function(event) {
+                    var element = $(this),
+                        listImage = $("#image").val().split(";"),
+                        url = element.parents("#sya_gallery_form_preview").find("input[name=\'sya_url\']").val(),
+                        imageChange = [];
+
+                    for(i = 0; i < listImage.length; i++){
+                        var image = jQuery.parseJSON(listImage[i]);
+
+                        if (image.url == url){
+                            element.each(function(){
+                                image[element.attr("name").replace("sya_", "")] = element.val();
+                            });
+
+                            $("div[id=\'" + url + "\']").attr("data-info", JSON.stringify(image));
                         }
+
+                        imageChange[i] = JSON.stringify(image);
                     }
 
-                    $("#image").val(listImage.length ? listImage.join() : "");
+                    $("#image").val(imageChange.length ? imageChange.join(";") : listImage);
+                });
+            }
 
-                    $(element).parent().removeClass("active");
-                    $("#sya_gallery_viewpath").html("");
+            function removeImageByGallery(element){
+                var listImage = $("#image").val().split(";"),
+                    image = $(element).attr("data-info");
+
+                if ($("#image").val().length && listImage.length){
+                    for(i = 0; i < listImage.length; i++){
+                        if (listImage[i] == image){
+                            listImage.splice(i, 1);
+                        }
+                    }
                 }
+
+                $("#image").val(listImage.length ? listImage.join(";") : "");
+
+                $(element).parent().removeClass("active");
+                $("#sya_gallery_viewpath").html("");
             }
 
             function addImageByGallery(type){
                 var module = "' . $this->moduleName . '",
                     attribute = "' . $this->attribute . '",
+                    templateInfomationImage = \'' . str_replace(array("\r\n", "\n", "\r"), '', $this->infomationImage) . '\',
+                    templateInfomationImageDetail = \'' . str_replace(array("\r\n", "\n", "\r"), '', $this->infomationImageDetail) . '\',
                     columns = \'' . Json::encode($this->columns) . '\',
-                    image = $("#image").val(),
-                    title = $("#sya_preview_title").val(),
-                    caption = $("#sya_preview_caption").val(),
-                    alt_text = $("#sya_preview_alt_text").val();
+                    image = $("#image").val();
 
                 if (image.length > 0) {
                     $.ajax({
                         url: "' . Url::to(['/gallery/ajax/additemimage']) . '",
                         type: "post",
-                        data: {type: type, module: module, attribute: attribute, columns: columns, image: image, title: title, caption: caption, alt_text: alt_text},
+                        data: {type: type, module: module, attribute: attribute, columns: columns, image: image, templateInfomationImage: templateInfomationImage, templateInfomationImageDetail: templateInfomationImageDetail},
                     }).done(function (data) {
                         if (data.length > 0) {
                             $("' . $this->syaContainer . '").append(data);
@@ -380,6 +907,14 @@ HTML;
                     data: {type: "' . self::TYPE_PATH . '"},
                 }).done(function (data) {
                     $(".sya_media_library").html(data);
+
+                    $(".sya_remove_img").hover(function(){
+                        $(this).removeClass("glyphicon-ok");
+                        $(this).addClass("glyphicon-remove");
+                    }, function(){
+                        $(this).addClass("glyphicon-ok");
+                        $(this).removeClass("glyphicon-remove");
+                    });
                 });
             }
         ', View::POS_END);
