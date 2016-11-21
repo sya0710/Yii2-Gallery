@@ -76,11 +76,12 @@ class AjaxController extends \yii\web\Controller{
         } elseif ($type == Gallery::TYPE_URL) {// Lay ra duong dan anh khi type la url
             $image = Yii::$app->request->post('image');
 
+            $columnsDefault = Json::decode($image);
+
             if (empty($image))
                 return;
 
             $gallery[$id] = ArrayHelper::merge([
-                'url' => $image,
                 'type' => $type
             ], $columnsDefault);
 

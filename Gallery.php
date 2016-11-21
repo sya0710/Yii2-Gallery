@@ -226,8 +226,9 @@ HTML;
                             ],
                             [
                                 'label' => Yii::t('gallery', 'Insert from URL'),
-                                'content' => '<div class="panel-body">
-                                                    <input type="url" class="form-control sya_image_input sya_input_info_image"/>
+                                'content' => '<div class="panel-body" id="sya_gallery_form_preview">
+                                					<input type="hidden" class="form-control sya_image_input"/>
+                                                    <input type="url" class="form-control sya_input_info_image" name="sya_url"/>
                                                     <div id="embed_url_settings" class="row"></div>
                                                 </div>',
                                 'linkOptions' => [
@@ -581,11 +582,19 @@ HTML;
             $template .= Html::img($image, ['id' => 'embed_image_url']);
         $template .= Html::endTag('div');
 
+        // Title image
+        $template .= Html::beginTag('div', ['class' => 'col-sm-12 embed_field']);
+            $template .= Html::beginTag('label', ['class' => 'row']);
+                $template .= Html::tag('span', 'Title', ['class' => 'col-sm-12']);
+                $template .= Html::input('text', 'sya_title', '', ['class' => 'form-control col-sm-12', 'id' => 'sya_preview_title']);
+            $template .= Html::endTag('label');
+        $template .= Html::endTag('div');
+
         // Caption image
         $template .= Html::beginTag('div', ['class' => 'col-sm-12 embed_field']);
             $template .= Html::beginTag('label', ['class' => 'row']);
                 $template .= Html::tag('span', 'Caption', ['class' => 'col-sm-12']);
-                $template .= Html::textarea('', '', ['class' => 'form-control col-sm-12']);
+                $template .= Html::textarea('sya_caption', '', ['class' => 'form-control col-sm-12', 'id' => 'sya_preview_caption']);
             $template .= Html::endTag('label');
         $template .= Html::endTag('div');
 
@@ -593,7 +602,7 @@ HTML;
         $template .= Html::beginTag('div', ['class' => 'col-sm-12 embed_field']);
             $template .= Html::beginTag('label', ['class' => 'row']);
                 $template .= Html::tag('span', 'Alt text', ['class' => 'col-sm-12']);
-                $template .= Html::input('text', '', '', ['class' => 'form-control col-sm-12']);
+                $template .= Html::input('text', 'sya_alt_text', '', ['class' => 'form-control col-sm-12', 'id' => 'sya_preview_alt_text']);
             $template .= Html::endTag('label');
         $template .= Html::endTag('div');
 
@@ -975,12 +984,15 @@ HTML;
             })
 
             $(".sya_input_info_image").on("input",function(e){
+            	var image = $(this).val();
                 $.ajax({
                     url: "' . Url::to(['/gallery/ajax/getimagepreview']) . '",
                     type: "post",
-                    data: {image: $(this).val()},
+                    data: {image: image},
                 }).done(function (data) {
                     $("#embed_url_settings").html(data);
+                    $("#image").val("{\"url\": \"" + image + "\", \"title\":\"\", \"caption\":\"\", \"alt_text\":\"\"}");
+                    formChangeValue();
                 });
             });
 
