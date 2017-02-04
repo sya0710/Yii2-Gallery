@@ -65,14 +65,14 @@ class Gallery extends \yii\widgets\InputWidget {
         <thead>
             <tr>
                 <th>
-                    Image preview
+                    {preview}
                 </th>
                 <th>
-                    Image Infomaton
+                    {infomation}
                 </th>
                 {columns}
                 <th>
-                    Action
+                    {action}
                 </th>
             </tr>
         </thead>
@@ -255,6 +255,12 @@ HTML;
         switch ($name) {
             case '{columns}':
                 return $this->renderColumns();
+            case '{preview}':
+                return $this->renderPreview();
+            case '{infomation}':
+                return $this->renderInfomationText();
+            case '{action}':
+                return $this->renderActionText();
             case '{infomationImage}':
                 return $this->renderInfomation();
             default:
@@ -276,6 +282,36 @@ HTML;
                 $template .= Html::tag($this->tagHeaderColumns, $titleColumn, $this->tagHeaderOptions);
             }
         }
+
+        return $template;
+    }
+
+    /**
+     * Function generate preview text
+     * @return null|string
+     */
+    protected function renderPreview(){
+        $template = Yii::t('gallery', 'Image preview');
+
+        return $template;
+    }
+
+    /**
+     * Function generate infomation text
+     * @return null|string
+     */
+    protected function renderInfomationText(){
+        $template = Yii::t('gallery', 'Image Infomaton');
+
+        return $template;
+    }
+
+    /**
+     * Function generate action text
+     * @return null|string
+     */
+    protected function renderActionText(){
+        $template = Yii::t('gallery', 'Action');
 
         return $template;
     }
