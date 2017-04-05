@@ -29,6 +29,11 @@ HTML;
 HTML;
 
     /**
+     * @var bool
+     */
+    public $multiple = false;
+
+    /**
      * @param $template String template gallery
      * @throws \Exception
      */
@@ -52,7 +57,7 @@ HTML;
 
         if (empty($galleries) OR !is_array($galleries))
             return null;
-        
+
         foreach ($galleries as $galleryId => $gallery) {
             // Tao giao dien cho cac image
             $templateGallery .= self::buildTemplateRow($gallery, $galleryId, $module, $attribute, $columns, $template, $templateInfomationDetail);
