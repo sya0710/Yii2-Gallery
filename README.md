@@ -25,6 +25,7 @@ use sya\gallery\Module;
 
 ## Demo
 
+# Gallery
 ```php
 use sya\gallery\models\Gallery;
 $form->field($model, 'gallery'])->widget(Gallery::className(), [
@@ -39,6 +40,15 @@ $form->field($model, 'gallery'])->widget(Gallery::className(), [
       ],
   ]
 ]),
+```
+
+# Single Image
+
+```php
+use sya\gallery\Image;
+$form->field($model, 'image', ['horizontalCssClasses' => []])->widget(Image::className(), [
+  'class_button' => 'form-control button_color ',
+])
 ```
 
 ## License
