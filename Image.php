@@ -12,21 +12,28 @@ use yii\web\View;
 class Image extends \sya\gallery\widgets\BaseWidget {
     
     public $layouts = <<< HTML
-        <div id="tableImage" style="margin-bottom: 10px;">
+        <div id="{syaContainer}" style="margin-bottom: 10px;" class="sya_file_preview">
             {infomationImage}
         </div>
 HTML;
 
     public $infomationImage = <<< HTML
+        <div class="sya_preview_image">
         {image}
         {typeImage}
         {infomation}
         {columns}
+        </div>
 HTML;
 
     public $infomationImageDetail = <<< HTML
         {fieldInput}
 HTML;
+
+    /**
+     * @var String Name function preview image
+     */
+    public static $syaPreviewImage = 'syaPreviewSingleImage';
 
     /**
      * @var bool
@@ -168,10 +175,9 @@ HTML;
 
     protected function registerAssets(){
         \sya\gallery\GalleryAssets::register($this->getView());
-        parent::registerAssets();
 
         $this->getView()->registerJs('
-            function addImageByGallery(type){
+            function addImageBySingleImage(type){
                 var module = "' . $this->moduleName . '",
                     attribute = "' . $this->attribute . '",
                     templateInfomationImage = \'' . str_replace(array("\r\n", "\n", "\r"), '', $this->infomationImage) . '\',
@@ -186,17 +192,23 @@ HTML;
                         data: {type: type, widget_class: widget_class, module: module, attribute: attribute, columns: columns, image: image, templateInfomationImage: templateInfomationImage, templateInfomationImageDetail: templateInfomationImageDetail},
                     }).done(function (data) {
                         if (data.length > 0) {
-                            $("' . $this->syaContainer . '").html("");
-                            $("' . $this->syaContainer . '").append(data);
-                            $("#sya_gallery_modal").modal("hide");
+                            $("#' . $this->syaContainer . '").html("");
+                            $("#' . $this->syaContainer . '").append(data);
+                            $("#' . $this->optionModal . '").modal("hide");
                             // Reset value
                             $("#sya_gallery_path").find(".active").removeClass("active");
-                            $("#sya_gallery_viewpath").html("");
+                            $(".' . $this->idPreview . '").html("");
                             $(".sya_image_input").val("");
                         }
                     });
                 }
             }
         ', View::POS_END);
+
+        $this->getView()->registerJs('
+            $("#' . $this->optionButton . '").click(function() {
+                addImageBySingleImage($(this).attr("data-type"));
+            });
+        ', View::POS_READY);
     }
 }

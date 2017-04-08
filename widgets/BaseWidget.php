@@ -50,11 +50,31 @@ class BaseWidget extends \yii\widgets\InputWidget {
     public $tagHeaderOptions = [];
 
     /**
+     * @var array Tag Html attribute modal
+     */
+    public $optionModal = 'sya_gallery_modal';
+
+    public $idPreview = 'sya_gallery_viewpath';
+
+    /**
      * @var array Class Html attribute button
      */
     public $class_button;
 
-    public $syaContainer = '#tableImage';
+    /**
+     * @var String Container content gallery
+     */
+    public $syaContainer = 'tableImage';
+
+    /**
+     * @var String Name function preview image
+     */
+    public static $syaPreviewImage = 'syaPreviewImage';
+
+    /**
+     * @var String Option id for button add image
+     */
+    public $optionButton = 'insert_image';
     /**
      * @var string The template for rendering the gallery within a panel.
      * The following special variables are recognized and will be replaced:
@@ -81,7 +101,7 @@ class BaseWidget extends \yii\widgets\InputWidget {
         </thead>
         <!-- End header table -->
         <!-- Begin content table -->
-        <tbody id="tableImage">
+        <tbody id="{syaContainer}">
             {infomationImage}
         </tbody>
         <!-- End content table -->
@@ -142,6 +162,7 @@ HTML;
     public function run() {
         parent::run();
         $this->registerAssets();
+        $this->registerBaseAssets();
         $this->initLayout();
         $template = preg_replace_callback("/{\\w+}/", function ($matches) {
             $template = $this->renderSection($matches[0]);
@@ -161,9 +182,14 @@ HTML;
             $columnsTemplate = $this->renderColumns();
             $replace['{columns}'] = $columnsTemplate;
         }
+        
         if (strpos($this->layouts, '{infomationImage}') !== false) {
             $infomationTemplate = $this->renderInfomation();
             $replace['{infomationImage}'] = $infomationTemplate;
+        }
+
+        if (strpos($this->layouts, '{syaContainer}') !== false) {
+            $replace['{syaContainer}'] = $this->syaContainer;
         }
         $this->layouts = strtr($this->layouts, $replace);
     }
@@ -197,14 +223,14 @@ HTML;
         // Display button add image and modal add image
         Modal::begin([
             'header' => Yii::t('gallery', 'Add Image'),
-            'footer' => '<button class="btn btn-success" id="insert_image" data-type="' . self::TYPE_UPLOAD . '">' . Yii::t('gallery', 'Add Image'),
+            'footer' => '<button class="btn btn-success" id="' . $this->optionButton . '" data-type="' . self::TYPE_UPLOAD . '">' . Yii::t('gallery', 'Add Image'),
             'toggleButton' => [
                 'label' => Yii::t('gallery', 'Add Image'),
                 'class' => $this->class_button . 'btn btn-success'
             ],
             'size' => 'modal-lg custom_modal_gallery',
             'options' => [
-                'id' => 'sya_gallery_modal'
+                'id' => $this->optionModal
             ]
         ]);
             echo Html::beginTag('div', ['class' => 'tabs-container']);
@@ -231,7 +257,7 @@ HTML;
                                                             <div class="col-md-8" id="sya_gallery_path">
                                                                 <div class="row sya_media_library"></div>
                                                             </div>
-                                                            <div class="col-md-4" id="sya_gallery_viewpath"></div>
+                                                            <div class="col-md-4 ' . $this->idPreview . '"></div>
                                                         </div>
                                                     </div>
                                                 </div>',
@@ -486,7 +512,7 @@ HTML;
      * @param $imgPathFull Path full of image
      * @return string
      */
-    private static function _generateGalleryTemplateByPath($imgPath, $imgPathFull){
+    protected static function _generateGalleryTemplateByPath($imgPath, $imgPathFull){
         $template = Html::beginTag('div', ['class' => 'col-md-3 col-lg-3 text-center']);
             $template .= Html::icon('ok', ['class' => 'icon-active sya_remove_img', 'onclick' => 'removeImageByGallery($(this).next());']);
             $infomation_images = Json::encode([
@@ -496,7 +522,7 @@ HTML;
                 'alt_text' => '',
             ]);
             // View image
-            $template .= Html::beginTag('div', ['class' => 'letImgPreview', 'id' => $imgPath, 'data-info' => $infomation_images, 'onclick' => 'syaPreviewImage(this);']);
+            $template .= Html::beginTag('div', ['class' => 'letImgPreview', 'id' => $imgPath, 'data-info' => $infomation_images, 'onclick' => self::$syaPreviewImage . '(this);']);
                 $template .= Html::img('@web/' . $imgPathFull, ['style' => 'max-width: 100%;']);
             $template .= Html::endTag('div');
         $template .= Html::endTag('div');
@@ -732,6 +758,68 @@ HTML;
 
     protected function registerAssets(){
         \sya\gallery\GalleryAssets::register($this->getView());
+        $this->getView()->registerJs('
+            function removeImageByGallery(element){
+                var listImage = $("#image").val().split(";"),
+                    image = $(element).attr("data-info");
+                if ($("#image").val().length && listImage.length){
+                    for(i = 0; i < listImage.length; i++){
+                        if (listImage[i] == image){
+                            listImage.splice(i, 1);
+                        }
+                    }
+                }
+                $("#image").val(listImage.length ? listImage.join(";") : "");
+                $(element).parent().removeClass("active");
+                $(".' . $this->idPreview . '").html("");
+            }
+
+            function addImageByGallery(type){
+                var module = "' . $this->moduleName . '",
+                    attribute = "' . $this->attribute . '",
+                    templateInfomationImage = \'' . str_replace(array("\r\n", "\n", "\r"), '', $this->infomationImage) . '\',
+                    templateInfomationImageDetail = \'' . str_replace(array("\r\n", "\n", "\r"), '', $this->infomationImageDetail) . '\',
+                    columns = \'' . Json::encode($this->columns) . '\',
+                    image = $("#image").val();
+                if (image.length > 0) {
+                    $.ajax({
+                        url: "' . Url::to(['/gallery/ajax/additemimage']) . '",
+                        type: "post",
+                        data: {type: type, module: module, attribute: attribute, columns: columns, image: image, templateInfomationImage: templateInfomationImage, templateInfomationImageDetail: templateInfomationImageDetail},
+                    }).done(function (data) {
+                        if (data.length > 0) {
+                            $("#' . $this->syaContainer . '").append(data);
+                            $("#' . $this->optionModal . '").modal("hide");
+                            // Reset value
+                            $("#sya_gallery_path").find(".active").removeClass("active");
+                            $(".' . $this->idPreview . '").html(" ");
+                            $(".sya_image_input").val("");
+                        }
+                    });
+                }
+            }
+
+            // Ham xoa anh
+            function syaremoveImage(element){
+                var confirmAlert = confirm("' . Yii::t('yii', 'Are you sure you want to delete this item?') . '");
+                if (confirmAlert == true){
+                    $(element).parents("#imageItem").remove();
+                    // Kiem tra co anh trong gallery hay khong
+                    if ($("#' . $this->syaContainer . '").children().length == 0) {
+                        $("#' . $this->syaContainer . '").append(\'' . Html::hiddenInput($this->moduleName . '[' . $this->attribute . ']', '', ['class' => 'form-control']) . '\');
+                    }
+                }
+            }
+        ', View::POS_END);
+        $this->getView()->registerJs('
+            $("#' . $this->optionButton . '").click(function() {
+                addImageByGallery($(this).attr("data-type"));
+            });
+        ', View::POS_READY);
+    }
+
+    protected function registerBaseAssets() {
+        \sya\gallery\GalleryAssets::register($this->getView());
         $singleGallery = [
             'active' => null,
             'noactive' => ''
@@ -744,7 +832,27 @@ HTML;
                 }'
             ];
         $this->getView()->registerJs('
-            function syaPreviewImage(element){
+            function formChangeValue(){
+                $("#sya_gallery_form_preview .form-control").keyup(function(event) {
+                    var element = $(this),
+                        listImage = $("#image").val().split(";"),
+                        url = element.parents("#sya_gallery_form_preview").find("input[name=\'sya_url\']").val(),
+                        imageChange = [];
+                    for(i = 0; i < listImage.length; i++){
+                        var image = jQuery.parseJSON(listImage[i]);
+                        if (image.url == url){
+                            element.each(function(){
+                                image[element.attr("name").replace("sya_", "")] = element.val();
+                            });
+                            $("div[id=\'" + url + "\']").attr("data-info", JSON.stringify(image));
+                        }
+                        imageChange[i] = JSON.stringify(image);
+                    }
+                    $("#image").val(imageChange.length ? imageChange.join(";") : listImage);
+                });
+            }
+
+            function ' . self::$syaPreviewImage . '(element){
                 var listImage = $("#image").val().split(";"),
                     imagesSelected = [],
                     image = $(element).attr("data-info");
@@ -753,7 +861,7 @@ HTML;
                     type: "post",
                     data: {image: image},
                 }).done(function (data) {
-                    $("#sya_gallery_viewpath").html(data);
+                    $(".' . $this->idPreview . '").html(data);
                     formChangeValue();
                 });
                 if (!$(element).parent().hasClass("active")) {
@@ -775,80 +883,13 @@ HTML;
                     $(element).parent().addClass("active");
                 }' . ArrayHelper::getValue($singleGallery, "noactive") . '
             }
-            function formChangeValue(){
-                $("#sya_gallery_form_preview .form-control").keyup(function(event) {
-                    var element = $(this),
-                        listImage = $("#image").val().split(";"),
-                        url = element.parents("#sya_gallery_form_preview").find("input[name=\'sya_url\']").val(),
-                        imageChange = [];
-                    for(i = 0; i < listImage.length; i++){
-                        var image = jQuery.parseJSON(listImage[i]);
-                        if (image.url == url){
-                            element.each(function(){
-                                image[element.attr("name").replace("sya_", "")] = element.val();
-                            });
-                            $("div[id=\'" + url + "\']").attr("data-info", JSON.stringify(image));
-                        }
-                        imageChange[i] = JSON.stringify(image);
-                    }
-                    $("#image").val(imageChange.length ? imageChange.join(";") : listImage);
-                });
-            }
-            function removeImageByGallery(element){
-                var listImage = $("#image").val().split(";"),
-                    image = $(element).attr("data-info");
-                if ($("#image").val().length && listImage.length){
-                    for(i = 0; i < listImage.length; i++){
-                        if (listImage[i] == image){
-                            listImage.splice(i, 1);
-                        }
-                    }
-                }
-                $("#image").val(listImage.length ? listImage.join(";") : "");
-                $(element).parent().removeClass("active");
-                $("#sya_gallery_viewpath").html("");
-            }
-            function addImageByGallery(type){
-                var module = "' . $this->moduleName . '",
-                    attribute = "' . $this->attribute . '",
-                    templateInfomationImage = \'' . str_replace(array("\r\n", "\n", "\r"), '', $this->infomationImage) . '\',
-                    templateInfomationImageDetail = \'' . str_replace(array("\r\n", "\n", "\r"), '', $this->infomationImageDetail) . '\',
-                    columns = \'' . Json::encode($this->columns) . '\',
-                    image = $("#image").val();
-                if (image.length > 0) {
-                    $.ajax({
-                        url: "' . Url::to(['/gallery/ajax/additemimage']) . '",
-                        type: "post",
-                        data: {type: type, module: module, attribute: attribute, columns: columns, image: image, templateInfomationImage: templateInfomationImage, templateInfomationImageDetail: templateInfomationImageDetail},
-                    }).done(function (data) {
-                        if (data.length > 0) {
-                            $("' . $this->syaContainer . '").append(data);
-                            $("#sya_gallery_modal").modal("hide");
-                            // Reset value
-                            $("#sya_gallery_path").find(".active").removeClass("active");
-                            $("#sya_gallery_viewpath").html("");
-                            $(".sya_image_input").val("");
-                        }
-                    });
-                }
-            }
-            // Ham xoa anh
-            function syaremoveImage(element){
-                var confirmAlert = confirm("' . Yii::t('yii', 'Are you sure you want to delete this item?') . '");
-                if (confirmAlert == true){
-                    $(element).parents("#imageItem").remove();
-                    // Kiem tra co anh trong gallery hay khong
-                    if ($("' . $this->syaContainer . '").children().length == 0) {
-                        $("' . $this->syaContainer . '").append(\'' . Html::hiddenInput($this->moduleName . '[' . $this->attribute . ']', '', ['class' => 'form-control']) . '\');
-                    }
-                }
-            }
+
             var page = 2;
             function syaloadMoreImage(){
                 $.ajax({
                     url: "' . Url::to(['/gallery/ajax/getgallerypath']) . '",
                     type: "post",
-                    data: {type: $("#insert_image").attr("data-type"), page: page},
+                    data: {type: $("#' . $this->optionButton . '").attr("data-type"), page: page},
                 }).done(function (data) {
                     if (data != "") {
                         $(".sya_media_library").append(data);
@@ -856,6 +897,7 @@ HTML;
                     }
                 });
             }
+
             function syaGetGalleryByPath(){
                 $.ajax({
                     url: "' . Url::to(['/gallery/ajax/getgallerypath']) . '",
@@ -873,9 +915,10 @@ HTML;
                 });
             }
         ', View::POS_END);
+
         $this->getView()->registerJs('
             // Sap xep anh
-            $("' . $this->syaContainer . '").sortable({});
+            $("#' . $this->syaContainer . '").sortable({});
             // Dropzone drop and drag file
             Dropzone.options.myAwesomeDropzone = {
                 uploadMultiple: true,
@@ -908,6 +951,7 @@ HTML;
                     });
                 }
             }
+
             $(".custom_modal_gallery a[data-toggle=\'tab\']").on("shown.bs.tab", function (e) {
                 var tabs = $(e.target).parents(".tabs-left"),
                     image = tabs.find(".active").find(".sya_image_input");
@@ -918,8 +962,9 @@ HTML;
                 image.focus();
                 tabs.find(".sya_image_input").removeAttr("id");
                 image.attr("id", "image");
-                $("#insert_image").attr("data-type", $(e.target).attr("data-type"));
+                $("#' . $this->optionButton . '").attr("data-type", $(e.target).attr("data-type"));
             })
+
             $(".sya_input_info_image").on("input",function(e){
                 var image = $(this).val();
                 $.ajax({
@@ -932,9 +977,7 @@ HTML;
                     formChangeValue();
                 });
             });
-            $("#insert_image").click(function() {
-                addImageByGallery($(this).attr("data-type"));
-            });
+
             $( ".sya_media_library" ).scroll(function() {
                 var scrollPosition = $(this).scrollTop() + $(this).outerHeight(),
                     divTotalHeight = $(this)[0].scrollHeight

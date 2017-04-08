@@ -153,7 +153,6 @@ class AjaxController extends \yii\web\Controller{
         // Widget call function build image
         $widget_class = Yii::$app->request->post('widget_class', '/sya/gallery/Gallery');
         $widget_class = $this->rewriteWidgetClass($widget_class);
-
         echo $widget_class::getGalleryByPath($path, $page);
     }
 
