@@ -639,43 +639,71 @@ HTML;
      * @return null|string
      */
     public static function getGalleryByPath($path = '', $page = 1, $limit = 12, $template = ''){
-        if (!is_dir($path)) {
-            throw new InvalidParamException("The dir argument must be a directory: $path");
-        }
-        // So file can lay
-        $offset = $page * $limit;
-        // Duong dan chua anh
-        $rootPath = Yii::getAlias(Yii::$app->getModule('gallery')->syaDirPath);
         // Thu muc upload
         $dirPath = Yii::$app->getModule('gallery')->syaDirUpload;
-        if (!file_exists($path))
-            return null;
-        // Get all file and Sort file DESC time
-        $entrys = scandir($path, 1);
-        foreach ($entrys as $k => $entry) {
+
+        // So file can lay
+        $offset = $page * $limit;
+
+        $arrImage = self::_getGalleryByPath($path);
+
+        krsort($arrImage);
+        foreach ($arrImage as $imgPath) {
             if (self::$countFileItem == $offset) {
                 self::$countFileItemLimit = 0;
                 break;
             }
+
+            self::$countFileItem++;
+            self::$countFileItemLimit++;
+            if ($page !== 1 AND self::$countFileItemLimit + $limit <= $offset){
+                continue;
+            }
+            $template .= self::_generateGalleryTemplateByPath($imgPath, $dirPath . DIRECTORY_SEPARATOR . $imgPath);
+        }
+
+        return $template;
+    }
+
+    /**
+     * Ham lay ra hinh anh trong website theo duong dan
+     * @param string $path duong dan chua anh
+     * @param array $arrImage mang hinh anh
+     * @return null|string
+     */
+    protected function _getGalleryByPath($path = '', $arrImage = []) {
+        if (!is_dir($path)) {
+            throw new InvalidParamException("The dir argument must be a directory: $path");
+        }
+
+        // Duong dan chua anh
+        $rootPath = Yii::getAlias(Yii::$app->getModule('gallery')->syaDirPath);
+
+        // Thu muc upload
+        $dirPath = Yii::$app->getModule('gallery')->syaDirUpload;
+
+        if (!file_exists($path))
+            return null;
+
+        // Get all file and Sort file DESC time
+        $entrys = scandir($path);
+        foreach ($entrys as $k => $entry) {
             if (in_array($entry, ['.', '..', 'cache']))
                 continue;
+
             $entryPath = $path . DIRECTORY_SEPARATOR . $entry;
             if (is_dir($entryPath)) {
-                $template = self::getGalleryByPath($entryPath, $page, $limit, $template);
+                $arrImage = self::_getGalleryByPath($entryPath, $arrImage);
             } else {
-                self::$countFileItem++;
-                self::$countFileItemLimit++;
-                if ($page !== 1 AND self::$countFileItemLimit + $limit <= $offset){
-                    continue;
-                }
                 if (in_array(end(explode('.', $entry)), self::$fileType)) {
                     $imgPath = str_replace($rootPath . $dirPath . DIRECTORY_SEPARATOR, '', $entryPath);
                     // Generate img by path gallery library
-                    $template .= self::_generateGalleryTemplateByPath($imgPath, $dirPath . DIRECTORY_SEPARATOR . $imgPath);
+                    $arrImage[filemtime($dirPath . DIRECTORY_SEPARATOR . $imgPath)] = $imgPath;
                 }
             }
         }
-        return $template;
+
+        return $arrImage;
     }
 
     /**
@@ -944,8 +972,7 @@ HTML;
                         formData.contentType = false;
                         formData.enctype = "multipart/form-data";
                     });
-                    this.on("complete", function(files, responseText, e) {
-                        syaGetGalleryByPath();
+                    this.on("success", function(files, responseText, e) {
                         $(".custom_modal_gallery a[data-type=\'' . self::TYPE_PATH . '\']").tab("show");
                         $(".sya_media_library").prepend(responseText);
                     });

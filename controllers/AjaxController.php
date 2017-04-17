@@ -61,7 +61,7 @@ class AjaxController extends \yii\web\Controller{
                 $ext = FileHelper::getExtention($image);
                 if (!empty($ext)) {
                     $fileDir = strtolower($module) . '/' . date('Y/m/d/');
-                    $fileName = pathinfo($image, PATHINFO_BASENAME);
+                    $fileName = strtolower(pathinfo($image, PATHINFO_BASENAME));
                     $folder = Yii::getAlias(Yii::$app->getModule('gallery')->syaDirPath) . Yii::$app->getModule('gallery')->syaDirUpload . '/' . $fileDir;
                     FileHelper::createDirectory($folder);
                     $image->saveAs($folder . $fileName);
