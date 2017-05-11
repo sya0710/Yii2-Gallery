@@ -15,7 +15,8 @@
         "yiisoft/yii2": "*",
         "yiisoft/yii2-bootstrap": "*",
         "kartik-v/yii2-date-range": "*",
-        "bower-asset/dropzone": "*"
+        "bower-asset/dropzone": "*",
+        "letyii/yii2-imagecache": "*"
     },
     "autoload": {
         "psr-4": {

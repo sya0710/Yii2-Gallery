@@ -523,7 +523,7 @@ HTML;
             ]);
             // View image
             $template .= Html::beginTag('div', ['class' => 'letImgPreview', 'id' => $imgPath, 'data-info' => $infomation_images, 'onclick' => self::$syaPreviewImage . '(this);']);
-                $template .= Html::img('@web/' . $imgPathFull, ['style' => 'max-width: 100%;']);
+                $template .= Yii::$app->imageCache->img('@app/' . $imgPathFull, 'x115', ['style' => 'max-width: 100%;']);
             $template .= Html::endTag('div');
         $template .= Html::endTag('div');
         return $template;

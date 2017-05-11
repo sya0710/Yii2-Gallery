@@ -12,7 +12,7 @@ use yii\web\View;
 class Image extends \sya\gallery\widgets\BaseWidget {
     
     public $layouts = <<< HTML
-        <div id="{syaContainer}" style="margin-bottom: 10px;" class="sya_file_preview">
+        <div id="{syaContainer}" style="margin-bottom: 10px; display: none;" class="sya_file_preview">
             {infomationImage}
         </div>
 HTML;
@@ -192,6 +192,7 @@ HTML;
                         data: {type: type, widget_class: widget_class, module: module, attribute: attribute, columns: columns, image: image, templateInfomationImage: templateInfomationImage, templateInfomationImageDetail: templateInfomationImageDetail},
                     }).done(function (data) {
                         if (data.length > 0) {
+                            $("#' . $this->syaContainer . '").show();
                             $("#' . $this->syaContainer . '").html("");
                             $("#' . $this->syaContainer . '").append(data);
                             $("#' . $this->optionModal . '").modal("hide");
@@ -209,6 +210,10 @@ HTML;
             $("#' . $this->optionButton . '").click(function() {
                 addImageBySingleImage($(this).attr("data-type"));
             });
+
+            if ($.trim($("#' . $this->syaContainer . '").html()) != "") {
+                $("#' . $this->syaContainer . '").show();
+            }
         ', View::POS_READY);
     }
 }
