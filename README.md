@@ -5,7 +5,7 @@ Module manager gallery, upload image
 Add 
 
 ```php
-"sya/yii2-gallery": "dev-master"
+"sya/yii2-gallery": "~1.0"
 ```
 
 to the require section of your composer.json file.
