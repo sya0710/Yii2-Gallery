@@ -958,6 +958,7 @@ HTML;
                     module: "' . $this->moduleName . '",
                     columns: \'' . Json::encode($this->columns) . '\'
                 },
+                dictDefaultMessage: "<strong>Drop files here or click to upload. </strong></br>",
                 autoDiscover: false,
                 url: "' . Url::to(['/gallery/ajax/additemimage']) . '",
                 headers: {
