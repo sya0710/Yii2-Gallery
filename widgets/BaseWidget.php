@@ -787,21 +787,6 @@ HTML;
     protected function registerAssets(){
         \sya\gallery\GalleryAssets::register($this->getView());
         $this->getView()->registerJs('
-            function removeImageByGallery(element){
-                var listImage = $("#image").val().split(";"),
-                    image = $(element).attr("data-info");
-                if ($("#image").val().length && listImage.length){
-                    for(i = 0; i < listImage.length; i++){
-                        if (listImage[i] == image){
-                            listImage.splice(i, 1);
-                        }
-                    }
-                }
-                $("#image").val(listImage.length ? listImage.join(";") : "");
-                $(element).parent().removeClass("active");
-                $(".' . $this->idPreview . '").html("");
-            }
-
             function addImageByGallery(type){
                 var module = "' . $this->moduleName . '",
                     attribute = "' . $this->attribute . '",
@@ -860,6 +845,21 @@ HTML;
                 }'
             ];
         $this->getView()->registerJs('
+            function removeImageByGallery(element){
+                var listImage = $("#image").val().split(";"),
+                    image = $(element).attr("data-info");
+                if ($("#image").val().length && listImage.length){
+                    for(i = 0; i < listImage.length; i++){
+                        if (listImage[i] == image){
+                            listImage.splice(i, 1);
+                        }
+                    }
+                }
+                $("#image").val(listImage.length ? listImage.join(";") : "");
+                $(element).parent().removeClass("active");
+                $(".' . $this->idPreview . '").html("");
+            }
+            
             function formChangeValue(){
                 $("#sya_gallery_form_preview .form-control").keyup(function(event) {
                     var element = $(this),
